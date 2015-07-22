@@ -1,0 +1,22 @@
+{
+	"name": "wikibase/import",
+	"type": "mediawiki-extension",
+	"description": "Structured data repository for MediaWiki",
+	"keywords": [
+		"wikibase",
+		"wikidata"
+	],
+	"authors": [
+		{
+			"name": "Katie Filbert"
+		}
+	],
+	"require": {
+		"php": ">=5.3.2"
+	},
+	"autoload": {
+		"psr-4": {
+			"Wikibase\\Import\\": "src"
+		}
+	}
+}

@@ -1,0 +1,30 @@
+{
+	"name": "Wikibase Import",
+	"version": "0.1",
+	"author": [
+		"Katie Filbert"
+	],
+	"url": "https://www.mediawiki.org/wiki/Extension:WikibaseImport",
+	"descriptionmsg": "wikibaseimport-desc",
+	"license-name": "MIT",
+	"type": "wikibase",
+	"ExtensionMessagesFiles": {
+		"WikibaseImportAlias": "WikibaseImport.i18n.alias.php"
+	},
+	"Hooks": {
+		"LoadExtensionSchemaUpdates": [
+			"Wikibase\\Import\\Hooks::onLoadExtensionSchemaUpdates"
+		]
+	},
+	"config": {
+		"WBImportSourceApi": "https://www.wikidata.org/w/api.php"
+	},
+	"MessagesDirs": {
+		"WikibaseImport": [
+			"i18n"
+		]
+	},
+	"SpecialPages": {
+	},
+	"manifest_version": 1
+}

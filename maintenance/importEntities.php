@@ -18,7 +18,7 @@ if( $IP === false ) {
 
 require_once( "$IP/maintenance/Maintenance.php" );
 
-class ImportProperties extends \Maintenance {
+class ImportEntities extends \Maintenance {
 
 	public function __construct() {
 		parent::__construct();
@@ -61,5 +61,5 @@ class ImportProperties extends \Maintenance {
 	}
 }
 
-$maintClass = "Wikibase\Import\Maintenance\ImportProperties";
+$maintClass = "Wikibase\Import\Maintenance\ImportEntities";
 require_once RUN_MAINTENANCE_IF_MAIN;

@@ -33,7 +33,6 @@ class ImportEntities extends \Maintenance {
 	}
 
 	private function addOptions() {
-		$this->addOption( 'api-url', 'Source wiki api url. Default is Wikidata.', false, true );
 		$this->addOption( 'file', 'File with list of entity ids to import', false, true );
 		$this->addOption( 'all-properties', 'Import all properties', false, true );
 	}
@@ -47,18 +46,18 @@ class ImportEntities extends \Maintenance {
 
 		$propertyImporter = $this->newPropertyImporter();
 
+		$apiUrl = $this->getConfig()->get( 'WBImportSourceApi' );
+
 		if ( $this->allProperties ) {
-			$propertyImporter->importAllProperties( $this->apiUrl );
+			$propertyImporter->importAllProperties( $apiUrl );
 		}
 
 		if ( $this->file ) {
-			$propertyImporter->importFromFile( $this->apiUrl, $this->file );
+			$propertyImporter->importFromFile( $apiUrl, $this->file );
 		}
 	}
 
 	private function extractOptions() {
-		$this->apiUrl = $this->getOption( 'api-url', 'https://www.wikidata.org/w/api.php' );
-
 		$this->file = $this->getOption( 'file' );
 		$this->allProperties = $this->getOption( 'all-properties' );
 

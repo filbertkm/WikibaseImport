@@ -60,15 +60,20 @@ class PropertyImporter {
 		$this->idParser = new BasicEntityIdParser();
 	}
 
-	public function import( $apiUrl, $file = null ) {
-		if ( $file === null ) {
-			$ids = $this->propertyIdLister->fetch( $apiUrl );
-		} else {
-			$ids = array_map( 'trim', file( $file ) );
-		}
+	/**
+	 * @param string $apiUrl
+	 */
+	public function importAllProperties( $apiUrl ) {
+		$ids = $this->propertyIdLister->fetch( $apiUrl );
+		$this->importIds( $ids, $apiUrl );
+	}
 
-		var_export( $ids );
-
+	/**
+	 * @param string $apiUrl
+	 * @param string $file
+	 */
+	public function importFromFile( $apiUrl, $file ) {
+		$ids = array_map( 'trim', file( $file ) );
 		$this->importIds( $ids, $apiUrl );
 	}
 

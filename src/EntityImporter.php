@@ -25,13 +25,11 @@ use Wikibase\DataModel\Snak\PropertySomeValueSnak;
 use Wikibase\DataModel\Snak\PropertyValueSnak;
 use Wikibase\DataModel\Statement\Statement;
 use Wikibase\DataModel\Statement\StatementList;
-use Wikibase\Lib\Store\EntityLookup;
+use Wikibase\Lib\Store\EntityRevisionLookup;
 use Wikibase\Repo\Store\WikiPageEntityStore;
 use Wikibase\Repo\WikibaseRepo;
 
-class PropertyImporter {
-
-	private $entitySerializer;
+class EntityImporter {
 
 	private $statementSerializer;
 
@@ -45,89 +43,55 @@ class PropertyImporter {
 
 	private $entityMappingStore;
 
+	private $badgeItemUpdater;
+
 	private $idParser;
 
 	private $importUser;
 
 	private $apiUrl;
 
+	private $batchSize;
+
 	public function __construct(
-		Serializer $entitySerializer,
 		StatementSerializer $statementSerializer,
-		PropertyIdLister $propertyIdLister,
 		ApiEntityLookup $apiEntityLookup,
-		EntityLookup $entityLookup,
+		EntityRevisionLookup $entityRevisionLookup,
 		WikiPageEntityStore $entityStore,
 		ImportedEntityMappingStore $entityMappingStore,
 		$apiUrl
 	) {
-		$this->entitySerializer = $entitySerializer;
 		$this->statementSerializer = $statementSerializer;
-		$this->propertyIdLister = $propertyIdLister;
 		$this->apiEntityLookup = $apiEntityLookup;
-		$this->entityLookup = $entityLookup;
+		$this->entityRevisionLookup = $entityRevisionLookup;
 		$this->entityStore = $entityStore;
 		$this->entityMappingStore = $entityMappingStore;
 		$this->apiUrl = $apiUrl;
 
 		$this->importUser = User::newFromId( 0 );
 		$this->idParser = new BasicEntityIdParser();
+
+		$this->batchSize = 10;
+
+		$this->badgeItemUpdater = new BadgeItemUpdater( $entityMappingStore, $this );
 	}
 
-	public function importAllProperties() {
-		$ids = $this->propertyIdLister->fetch( $this->apiUrl );
-		$this->importIds( $ids );
-	}
-
-	/**
-	 * @param string $file
-	 */
-	public function importFromFile( $file ) {
-		$ids = array_map( 'trim', file( $file ) );
-		$this->importIds( $ids );
-	}
-
-	private function importIds( array $ids, $importStatements = true ) {
-		$idChunks = array_chunk( $ids, 10 );
+	public function importIds( array $ids, $importStatements = true ) {
+		$batches = array_chunk( $ids, $this->batchSize );
 
 		$stashedEntities = array();
 
-		$verbose = $importStatements ? false : true;
-
-		foreach( $idChunks as $idChunk ) {
-			$stashedEntities = array_merge(
-				$stashedEntities,
-				$this->importChunk( $idChunk, $verbose )
-			);
+		foreach( $batches as $batch ) {
+			$stashedEntities = array_merge( $stashedEntities, $this->importBatch( $batch ) );
 		}
 
-		if ( !$importStatements ) {
-			return;
-		}
-
-		foreach( $stashedEntities as $entity ) {
-			$statements = $entity->getStatements();
-
-			echo "adding statements: " . $entity->getId()->getSerialization() . "\n";
-
-			if ( !$statements->isEmpty() ) {
-				$localId = $this->entityMappingStore->getLocalId( $entity->getId()->getSerialization() );
-
-				$referencedEntities = $this->getReferencedEntities( $statements );
-
-				$this->importIds( $referencedEntities, false );
-
-				try {
-					$this->addStatementList( $this->idParser->parse( $localId ), $statements );
-				} catch ( \Exception $ex ) {
-					echo $ex->getMessage();
-				}
-			}
+		if ( $importStatements === true ) {
+			$this->importStatements( $stashedEntities );
 		}
 	}
 
-	private function importChunk( $idChunk, $verbose = false ) {
-		$entities = $this->apiEntityLookup->getEntities( $idChunk, $this->apiUrl );
+	private function importBatch( array $batch ) {
+		$entities = $this->apiEntityLookup->getEntities( $batch, $this->apiUrl );
 
 		$stashedEntities = array();
 
@@ -138,7 +102,7 @@ class PropertyImporter {
 
 			if ( !$this->entityMappingStore->getLocalId( $originalId ) ) {
 				try {
-					$entityRevision = $this->addEntity( $entity );
+					$entityRevision = $this->createEntity( $entity );
 					$localId = $entityRevision->getEntity()->getId()->getSerialization();
 					$this->entityMappingStore->add( $originalId, $localId );
 				} catch( \Exception $ex ) {
@@ -153,13 +117,13 @@ class PropertyImporter {
 		return $stashedEntities;
 	}
 
-	private function addEntity( Entity $entity ) {
+	private function createEntity( Entity $entity ) {
 		$entity->setId( null );
 
 		$entity->setStatements( new StatementList() );
 
 		if ( $entity instanceof Item ) {
-			$siteLinkList = $this->replaceBadgeLinks( $entity->getSiteLinkList() );
+			$siteLinkList = $this->badgeItemUpdater->replaceBadges( $entity->getSiteLinkList() );
 			$entity->setSiteLinkList( $siteLinkList );
 		}
 
@@ -190,47 +154,26 @@ class PropertyImporter {
 		return array_unique( $entities );
 	}
 
-	private function replaceBadgeLinks( SiteLinkList $siteLinks ) {
-		$siteLinkList = new SiteLinkList();
+	private function importStatements( array $stashedEntities ) {
+		foreach( $stashedEntities as $entity ) {
+			$statements = $entity->getStatements();
 
-		$badgeItems = array();
+			echo "adding statements: " . $entity->getId()->getSerialization() . "\n";
 
-		foreach( $siteLinks as $siteLink ) {
-			foreach( $siteLink->getBadges() as $badge ) {
-				$badgeItems[] = $badge->getSerialization();
-			}
-		}
+			if ( !$statements->isEmpty() ) {
+				$localId = $this->entityMappingStore->getLocalId( $entity->getId()->getSerialization() );
 
-		$badgeItems = array_unique( $badgeItems );
+				$referencedEntities = $this->getReferencedEntities( $statements );
 
-		$this->importIds( $badgeItems, false );
+				$this->importIds( $referencedEntities, false );
 
-		$newSiteLinks = array();
-
-		foreach( $siteLinks as $siteLink ) {
-			$badges = $siteLink->getBadges();
-
-			$newSiteLink = $siteLink;
-
-			if ( !empty( $badges ) ) {
-				$newBadges = array();
-
-				foreach( $badges as $badge ) {
-					$localId = $this->entityMappingStore->getLocalId( $badge->getSerialization() );
-					$newBadges[] = new ItemId( $localId );
+				try {
+					$this->addStatementList( $this->idParser->parse( $localId ), $statements );
+				} catch ( \Exception $ex ) {
+					echo $ex->getMessage();
 				}
-
-				$newSiteLink = new SiteLink(
-					$siteLink->getSiteId(),
-					$siteLink->getPageName(),
-					$newBadges
-				);
 			}
-
-			$newSiteLinks[] = $newSiteLink;
 		}
-
-		return new SiteLinkList( $newSiteLinks );
 	}
 
 	private function addStatementList( EntityId $entityId, StatementList $statements ) {

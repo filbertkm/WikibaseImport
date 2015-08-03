@@ -4,7 +4,7 @@ namespace Wikibase\Import;
 
 use LoadBalancer;
 
-class ImportedEntityStore {
+class ImportedEntityMappingStore {
 
 	/**
 	 * @var LoadBalancer

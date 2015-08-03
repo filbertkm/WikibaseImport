@@ -7,8 +7,8 @@ use DataValues\Serializers\DataValueSerializer;
 use Serializers\Serializer;
 use FauxRequest;
 use RequestContext;
+use User;
 use Wikibase\DataModel\DeserializerFactory;
-use Wikibase\DataModel\Entity\BasicEntityIdParser;
 use Wikibase\DataModel\Entity\Entity;
 use Wikibase\DataModel\Entity\EntityId;
 use Wikibase\DataModel\Entity\EntityIdValue;
@@ -17,6 +17,8 @@ use Wikibase\DataModel\Entity\ItemId;
 use Wikibase\DataModel\Entity\PropertyId;
 use Wikibase\DataModel\SerializerFactory;
 use Wikibase\DataModel\Serializers\StatementSerializer;
+use Wikibase\DataModel\Services\EntityId\BasicEntityIdParser;
+use Wikibase\DataModel\SiteLink;
 use Wikibase\DataModel\SiteLinkList;
 use Wikibase\DataModel\Snak\PropertyNoValueSnak;
 use Wikibase\DataModel\Snak\PropertySomeValueSnak;
@@ -24,6 +26,7 @@ use Wikibase\DataModel\Snak\PropertyValueSnak;
 use Wikibase\DataModel\Statement\Statement;
 use Wikibase\DataModel\Statement\StatementList;
 use Wikibase\Lib\Store\EntityLookup;
+use Wikibase\Repo\Store\WikiPageEntityStore;
 use Wikibase\Repo\WikibaseRepo;
 
 class PropertyImporter {
@@ -40,7 +43,13 @@ class PropertyImporter {
 
 	private $entityStore;
 
+	private $entityMappingStore;
+
 	private $idParser;
+
+	private $importUser;
+
+	private $apiUrl;
 
 	public function __construct(
 		Serializer $entitySerializer,
@@ -48,7 +57,9 @@ class PropertyImporter {
 		PropertyIdLister $propertyIdLister,
 		ApiEntityLookup $apiEntityLookup,
 		EntityLookup $entityLookup,
-		ImportedEntityStore $entityStore
+		WikiPageEntityStore $entityStore,
+		ImportedEntityMappingStore $entityMappingStore,
+		$apiUrl
 	) {
 		$this->entitySerializer = $entitySerializer;
 		$this->statementSerializer = $statementSerializer;
@@ -56,28 +67,27 @@ class PropertyImporter {
 		$this->apiEntityLookup = $apiEntityLookup;
 		$this->entityLookup = $entityLookup;
 		$this->entityStore = $entityStore;
+		$this->entityMappingStore = $entityMappingStore;
+		$this->apiUrl = $apiUrl;
 
+		$this->importUser = User::newFromId( 0 );
 		$this->idParser = new BasicEntityIdParser();
 	}
 
-	/**
-	 * @param string $apiUrl
-	 */
-	public function importAllProperties( $apiUrl ) {
-		$ids = $this->propertyIdLister->fetch( $apiUrl );
-		$this->importIds( $ids, $apiUrl );
+	public function importAllProperties() {
+		$ids = $this->propertyIdLister->fetch( $this->apiUrl );
+		$this->importIds( $ids );
 	}
 
 	/**
-	 * @param string $apiUrl
 	 * @param string $file
 	 */
-	public function importFromFile( $apiUrl, $file ) {
+	public function importFromFile( $file ) {
 		$ids = array_map( 'trim', file( $file ) );
-		$this->importIds( $ids, $apiUrl );
+		$this->importIds( $ids );
 	}
 
-	private function importIds( array $ids, $apiUrl, $importStatements = true ) {
+	private function importIds( array $ids, $importStatements = true ) {
 		$idChunks = array_chunk( $ids, 10 );
 
 		$stashedEntities = array();
@@ -87,7 +97,7 @@ class PropertyImporter {
 		foreach( $idChunks as $idChunk ) {
 			$stashedEntities = array_merge(
 				$stashedEntities,
-				$this->importChunk( $idChunk, $apiUrl, $verbose )
+				$this->importChunk( $idChunk, $verbose )
 			);
 		}
 
@@ -98,14 +108,14 @@ class PropertyImporter {
 		foreach( $stashedEntities as $entity ) {
 			$statements = $entity->getStatements();
 
-			echo "process " . $entity->getId()->getSerialization() . "\n";
+			echo "adding statements: " . $entity->getId()->getSerialization() . "\n";
 
 			if ( !$statements->isEmpty() ) {
-				$localId = $this->entityStore->getLocalId( $entity->getId()->getSerialization() );
+				$localId = $this->entityMappingStore->getLocalId( $entity->getId()->getSerialization() );
 
 				$referencedEntities = $this->getReferencedEntities( $statements );
 
-				$this->importIds( $referencedEntities, $apiUrl, false );
+				$this->importIds( $referencedEntities, false );
 
 				try {
 					$this->addStatementList( $this->idParser->parse( $localId ), $statements );
@@ -116,22 +126,22 @@ class PropertyImporter {
 		}
 	}
 
-	private function importChunk( $idChunk, $apiUrl, $verbose = false ) {
-		$entities = $this->apiEntityLookup->getEntities( $idChunk, $apiUrl );
+	private function importChunk( $idChunk, $verbose = false ) {
+		$entities = $this->apiEntityLookup->getEntities( $idChunk, $this->apiUrl );
 
 		$stashedEntities = array();
 
 		foreach( $entities as $originalId => $entity ) {
 			$stashedEntities[] = $entity->copy();
 
-			echo "check $originalId\n";
+			echo "importing $originalId\n";
 
-			if ( !$this->entityStore->getLocalId( $originalId ) ) {
+			if ( !$this->entityMappingStore->getLocalId( $originalId ) ) {
 				try {
-					$localId = $this->addEntity( $entity );
-
-					$this->entityStore->add( $originalId, $localId );
-				} catch( \UsageException $ex ) {
+					$entityRevision = $this->addEntity( $entity );
+					$localId = $entityRevision->getEntity()->getId()->getSerialization();
+					$this->entityMappingStore->add( $originalId, $localId );
+				} catch( \Exception $ex ) {
 					echo "failed to add $originalId\n";
 					echo $ex->getMessage();
 					echo "\n";
@@ -149,21 +159,16 @@ class PropertyImporter {
 		$entity->setStatements( new StatementList() );
 
 		if ( $entity instanceof Item ) {
-			// @fixme handle badge items
-			$entity->setSiteLinkList( new SiteLinkList() );
+			$siteLinkList = $this->replaceBadgeLinks( $entity->getSiteLinkList() );
+			$entity->setSiteLinkList( $siteLinkList );
 		}
 
-		return $this->createEntity( $entity );
-	}
-
-	private function createEntity( Entity $entity ) {
-		$params = array(
-			'action' => 'wbeditentity',
-			'data' => json_encode( $this->entitySerializer->serialize( $entity ) ),
-			'new' => $entity->getType()
+		return $this->entityStore->saveEntity(
+			$entity,
+			'Import entity',
+			$this->importUser,
+			EDIT_NEW
 		);
-
-		return $this->doApiRequest( $params );
 	}
 
 	private function getReferencedEntities( StatementList $statementList ) {
@@ -171,6 +176,8 @@ class PropertyImporter {
 		$entities = array();
 
 		foreach( $snaks as $snak ) {
+			$entities[] = $snak->getPropertyId();
+
 			if ( $snak instanceof PropertyValueSnak ) {
 				$value = $snak->getDataValue();
 
@@ -181,6 +188,49 @@ class PropertyImporter {
 		}
 
 		return array_unique( $entities );
+	}
+
+	private function replaceBadgeLinks( SiteLinkList $siteLinks ) {
+		$siteLinkList = new SiteLinkList();
+
+		$badgeItems = array();
+
+		foreach( $siteLinks as $siteLink ) {
+			foreach( $siteLink->getBadges() as $badge ) {
+				$badgeItems[] = $badge->getSerialization();
+			}
+		}
+
+		$badgeItems = array_unique( $badgeItems );
+
+		$this->importIds( $badgeItems, false );
+
+		$newSiteLinks = array();
+
+		foreach( $siteLinks as $siteLink ) {
+			$badges = $siteLink->getBadges();
+
+			$newSiteLink = $siteLink;
+
+			if ( !empty( $badges ) ) {
+				$newBadges = array();
+
+				foreach( $badges as $badge ) {
+					$localId = $this->entityMappingStore->getLocalId( $badge->getSerialization() );
+					$newBadges[] = new ItemId( $localId );
+				}
+
+				$newSiteLink = new SiteLink(
+					$siteLink->getSiteId(),
+					$siteLink->getPageName(),
+					$newBadges
+				);
+			}
+
+			$newSiteLinks[] = $newSiteLink;
+		}
+
+		return new SiteLinkList( $newSiteLinks );
 	}
 
 	private function addStatementList( EntityId $entityId, StatementList $statements ) {
@@ -203,7 +253,7 @@ class PropertyImporter {
 	private function copyStatement( Statement $statement ) {
 		$mainSnak = $statement->getMainSnak();
 
-		$newPropertyId = $this->entityStore->getLocalId( $mainSnak->getPropertyId()->getSerialization() );
+		$newPropertyId = $this->entityMappingStore->getLocalId( $mainSnak->getPropertyId()->getSerialization() );
 
 		switch( $mainSnak->getType() ) {
 			case 'somevalue':
@@ -216,7 +266,7 @@ class PropertyImporter {
 				$value = $mainSnak->getDataValue();
 
 				if ( $value instanceof EntityIdValue ) {
-					$localId = $this->entityStore->getLocalId( $value->getEntityId() );
+					$localId = $this->entityMappingStore->getLocalId( $value->getEntityId() );
 					$value = new EntityIdValue( $this->idParser->parse( $localId ) );
 				}
 

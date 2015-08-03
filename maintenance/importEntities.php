@@ -6,7 +6,7 @@ use DataValues\Serializers\DataValueSerializer;
 use Wikibase\DataModel\DeserializerFactory;
 use Wikibase\DataModel\SerializerFactory;
 use Wikibase\Import\ApiEntityLookup;
-use Wikibase\Import\ImportedEntityStore;
+use Wikibase\Import\ImportedEntityMappingStore;
 use Wikibase\Import\PropertyIdLister;
 use Wikibase\Import\PropertyImporter;
 use Wikibase\Repo\WikibaseRepo;
@@ -46,14 +46,12 @@ class ImportEntities extends \Maintenance {
 
 		$propertyImporter = $this->newPropertyImporter();
 
-		$apiUrl = $this->getConfig()->get( 'WBImportSourceApi' );
-
 		if ( $this->allProperties ) {
-			$propertyImporter->importAllProperties( $apiUrl );
+			$propertyImporter->importAllProperties();
 		}
 
 		if ( $this->file ) {
-			$propertyImporter->importFromFile( $apiUrl, $this->file );
+			$propertyImporter->importFromFile( $this->file );
 		}
 	}
 
@@ -71,13 +69,17 @@ class ImportEntities extends \Maintenance {
 	private function newPropertyImporter() {
 		$serializerFactory = $this->newSerializerFactory();
 
+		$wbRepo = WikibaseRepo::getDefaultInstance();
+
 		return new PropertyImporter(
 			$serializerFactory->newEntitySerializer(),
 			$serializerFactory->newStatementSerializer(),
 			new PropertyIdLister(),
 			new ApiEntityLookup( $this->newEntityDeserializer() ),
-			WikibaseRepo::getDefaultInstance()->getEntityLookup( 'uncached' ),
-			new ImportedEntityStore( wfGetLB() )
+			$wbRepo->getEntityLookup( 'uncached' ),
+			$wbRepo->getStore()->getEntityStore(),
+			new ImportedEntityMappingStore( wfGetLB() ),
+			$this->getConfig()->get( 'WBImportSourceApi' )
 		);
 	}
 

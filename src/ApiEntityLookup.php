@@ -39,7 +39,8 @@ class ApiEntityLookup {
 			return $this->extractEntities( $data );
 		}
 
-		throw new \RuntimeException( 'Api request failed' );
+		//throw new \RuntimeException(
+		echo "Api request was not a success\n";
 	}
 
 	private function doRequest( array $ids, $apiUrl ) {
@@ -61,7 +62,8 @@ class ApiEntityLookup {
 			return $data;
 		}
 
-		throw new \RuntimeException( 'Api request failed' );
+		echo "Failed to decode json api response\n";
+		//throw new \RuntimeException( 'Api request failed' );
 	}
 
 	private function extractEntities( array $entries ) {

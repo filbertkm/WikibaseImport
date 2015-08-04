@@ -2,12 +2,8 @@
 
 namespace Wikibase\Import\Maintenance;
 
-use DataValues\Serializers\DataValueSerializer;
-use Wikibase\DataModel\DeserializerFactory;
-use Wikibase\DataModel\SerializerFactory;
-use Wikibase\Import\ApiEntityLookup;
 use Wikibase\Import\EntityImporter;
-use Wikibase\Import\ImportedEntityMappingStore;
+use Wikibase\Import\EntityImporterFactory;
 use Wikibase\Import\PropertyIdLister;
 use Wikibase\Repo\WikibaseRepo;
 
@@ -47,7 +43,8 @@ class ImportEntities extends \Maintenance {
 			return;
 		}
 
-		$entityImporter = $this->newEntityImporter();
+		$entityImporterFactory = new EntityImporterFactory( $this->getConfig() );
+		$entityImporter = $entityImporterFactory->newEntityImporter();
 
 		if ( $this->allProperties ) {
 			$propertyLister = new PropertyLister();
@@ -66,7 +63,7 @@ class ImportEntities extends \Maintenance {
 
 			try {
 				$id = $idParser->parse( $this->entity );
-				$entityImporter->importIds( array( $id ) );
+				$entityImporter->importIds( array( $id->getSerialization() ) );
 			} catch ( \Exception $ex ) {
 				$this->output( 'Invalid entity ID' );
 			}
@@ -85,35 +82,6 @@ class ImportEntities extends \Maintenance {
 		return true;
 	}
 
-	private function newEntityImporter() {
-		$wbRepo = WikibaseRepo::getDefaultInstance();
-
-		return new EntityImporter(
-			$this->newSerializerFactory()->newStatementSerializer(),
-			new ApiEntityLookup( $this->newEntityDeserializer() ),
-			$wbRepo->getEntityRevisionLookup( 'uncached' ),
-			$wbRepo->getStore()->getEntityStore(),
-			new ImportedEntityMappingStore( wfGetLB() ),
-			$this->getConfig()->get( 'WBImportSourceApi' )
-		);
-	}
-
-	private function newEntityDeserializer() {
-		$wikibaseRepo = WikibaseRepo::getDefaultInstance();
-
-		$deserializerFactory = new DeserializerFactory(
-			$wikibaseRepo->getDataValueDeserializer(),
-			$wikibaseRepo->getEntityIdParser()
-		);
-
-		return $deserializerFactory->newEntityDeserializer();
-	}
-
-	private function newSerializerFactory() {
-		return new SerializerFactory(
-			new DataValueSerializer()
-		);
-	}
 }
 
 $maintClass = "Wikibase\Import\Maintenance\ImportEntities";

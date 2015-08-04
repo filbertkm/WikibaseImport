@@ -14,52 +14,16 @@ class BadgeItemUpdater {
 	private $entityMappingStore;
 
 	/**
-	 * @var EntityImporter
-	 */
-	private $entityImporter;
-
-	/**
 	 * @param ImportedEntityMappingStore $entityMappingStore
-	 * @param EntityImporter $entityImporter
 	 */
-	public function __construct(
-		ImportedEntityMappingStore $entityMappingStore,
-		EntityImporter $entityImporter
-	) {
+	public function __construct( ImportedEntityMappingStore $entityMappingStore ) {
 		$this->entityMappingStore = $entityMappingStore;
-		$this->entityImporter = $entityImporter;
 	}
 
 	/**
 	 * @param SiteLinkList $siteLinks
 	 */
 	public function replaceBadges( SiteLinkList $siteLinks ) {
-		$badgeItems = $this->getBadgeItems( $siteLinks );
-
-		if ( $badgeItems === array() ) {
-			return $siteLinks;
-		}
-
-		$siteLinkList = new SiteLinkList();
-
-		$this->entityImporter->importIds( $badgeItems, false );
-
-		return $this->replaceAllBadgeItems( $siteLinks );
-	}
-
-	private function getBadgeItems( SiteLinkList $siteLinks ) {
-		$badgeItems = array();
-
-		foreach( $siteLinks as $siteLink ) {
-			foreach( $siteLink->getBadges() as $badge ) {
-				$badgeItems[] = $badge->getSerialization();
-			}
-		}
-
-		return array_unique( $badgeItems );
-	}
-
-	private function replaceAllBadgeItems( SiteLinkList $siteLinks ) {
 		$newSiteLinks = array();
 
 		foreach( $siteLinks as $siteLink ) {

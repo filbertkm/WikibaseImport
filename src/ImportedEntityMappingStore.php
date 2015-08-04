@@ -29,6 +29,10 @@ class ImportedEntityMappingStore {
 	}
 
 	public function getLocalId( $originalId ) {
+		if ( !is_string( $originalId ) ) {
+			throw new \InvalidArgumentException( '$originalId must be a string' );
+		}
+
 		$dbw = $this->loadBalancer->getConnection( DB_MASTER );
 
 		$res = $dbw->selectRow(
@@ -48,6 +52,10 @@ class ImportedEntityMappingStore {
 	}
 
 	public function getOriginalId( $localId ) {
+		if ( !is_string( $localId ) ) {
+			throw new \InvalidArgumentException( '$localId must be a string' );
+		}
+
 		$dbw = $this->loadBalaance->getConnection( DB_MASTER );
 
 		$res = $dbw->selectRow(

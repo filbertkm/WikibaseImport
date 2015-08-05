@@ -3,6 +3,7 @@
 namespace Wikibase\Import;
 
 use Http;
+use Psr\Log\LoggerInterface;
 
 /**
  * @licence GNU GPL v2+
@@ -25,8 +26,6 @@ class PropertyIdLister {
 
 			$this->extractContinuation( $res );
 			$this->extractProperties( $res );
-
-			echo $this->continuation . "\n";
 		} while ( $this->continuation !== null );
 
 		return $this->properties;

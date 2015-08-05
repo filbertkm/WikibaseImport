@@ -4,6 +4,7 @@ namespace Wikibase\Import;
 
 use Deserializers\DispatchingDeserializer;
 use Http;
+use Psr\Log\LoggerInterface;
 use Wikibase\Lib\Store\EntityLookup;
 
 /**
@@ -18,10 +19,17 @@ class ApiEntityLookup {
 	private $deserializer;
 
 	/**
-	 * @param DispatchingDeserializer $deserializer
+	 * @var LoggerInterface
 	 */
-	public function __construct( DispatchingDeserializer $deserializer ) {
+	private $logger;
+
+	/**
+	 * @param DispatchingDeserializer $deserializer
+	 * @param LoggerInterface $logger
+	 */
+	public function __construct( DispatchingDeserializer $deserializer, LoggerInterface $logger ) {
 		$this->deserializer = $deserializer;
+		$this->logger = $logger;
 	}
 
 	/**
@@ -39,8 +47,7 @@ class ApiEntityLookup {
 			return $this->extractEntities( $data );
 		}
 
-		//throw new \RuntimeException(
-		echo "Api request was not a success\n";
+		 $this->logger->error( 'Api request failed' );
 	}
 
 	private function doRequest( array $ids, $apiUrl ) {
@@ -62,8 +69,7 @@ class ApiEntityLookup {
 			return $data;
 		}
 
-		echo "Failed to decode json api response\n";
-		//throw new \RuntimeException( 'Api request failed' );
+		$this->logger->error( 'Failed to decode json api response' );
 	}
 
 	private function extractEntities( array $entries ) {

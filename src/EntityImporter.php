@@ -2,6 +2,7 @@
 
 namespace Wikibase\Import;
 
+use Psr\Log\LoggerInterface;
 use User;
 use Wikibase\DataModel\Entity\Entity;
 use Wikibase\DataModel\Entity\EntityId;
@@ -26,6 +27,8 @@ class EntityImporter {
 
 	private $entityMappingStore;
 
+	private $logger;
+
 	private $apiUrl;
 
 	private $importUser;
@@ -38,6 +41,7 @@ class EntityImporter {
 		ApiEntityLookup $apiEntityLookup,
 		WikiPageEntityStore $entityStore,
 		ImportedEntityMappingStore $entityMappingStore,
+		LoggerInterface $logger,
 		$apiUrl
 	) {
 		$this->statementsImporter = $statementsImporter;
@@ -45,6 +49,7 @@ class EntityImporter {
 		$this->apiEntityLookup = $apiEntityLookup;
 		$this->entityStore = $entityStore;
 		$this->entityMappingStore = $entityMappingStore;
+		$this->logger = $logger;
 		$this->apiUrl = $apiUrl;
 
 		$this->importUser = User::newFromId( 0 );
@@ -83,20 +88,19 @@ class EntityImporter {
 		foreach( $entities as $originalId => $entity ) {
 			$stashedEntities[] = $entity->copy();
 
-			echo "importing $originalId\n";
-
 			if ( !$this->entityMappingStore->getLocalId( $originalId ) ) {
 				try {
-					echo "creating $originalId\n";
+					$this->logger->info( "Creating $originalId" );
+
 					$entityRevision = $this->createEntity( $entity );
 					$localId = $entityRevision->getEntity()->getId()->getSerialization();
 					$this->entityMappingStore->add( $originalId, $localId );
 				} catch( \Exception $ex ) {
-					echo "failed to add $originalId\n";
-					echo $ex->getMessage();
-					echo "\n";
-					// omg!
+					$this->logger->error( "Failed to add $originalId" );
+					$this->logger->error( $ex->getMessage() );
 				}
+			} else {
+				$this->logger->info( "$originalId already imported" );
 			}
 		}
 

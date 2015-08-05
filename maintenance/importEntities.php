@@ -2,6 +2,7 @@
 
 namespace Wikibase\Import\Maintenance;
 
+use MediaWiki\Logger\LoggerFactory;
 use Wikibase\Import\EntityImporter;
 use Wikibase\Import\EntityImporterFactory;
 use Wikibase\Import\PropertyIdLister;
@@ -43,7 +44,9 @@ class ImportEntities extends \Maintenance {
 			return;
 		}
 
-		$entityImporterFactory = new EntityImporterFactory( $this->getConfig() );
+		$logger = LoggerFactory::getInstance( 'console' );
+
+		$entityImporterFactory = new EntityImporterFactory( $this->getConfig(), $logger );
 		$entityImporter = $entityImporterFactory->newEntityImporter();
 
 		if ( $this->allProperties ) {
@@ -63,11 +66,14 @@ class ImportEntities extends \Maintenance {
 
 			try {
 				$id = $idParser->parse( $this->entity );
+
 				$entityImporter->importIds( array( $id->getSerialization() ) );
 			} catch ( \Exception $ex ) {
-				$this->output( 'Invalid entity ID' );
+				$logger->error( 'Invalid entity ID' );
 			}
 		}
+
+		$logger->info( 'Done' );
 	}
 
 	private function extractOptions() {

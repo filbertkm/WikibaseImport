@@ -6,6 +6,7 @@ use ApiMain;
 use DataValues\Serializers\DataValueSerializer;
 use Serializers\Serializer;
 use FauxRequest;
+use Psr\Log\LoggerInterface;
 use RequestContext;
 use User;
 use Wikibase\DataModel\DeserializerFactory;
@@ -33,15 +34,19 @@ class StatementsImporter {
 
 	private $importUser;
 
+	private $logger;
+
 	private $apiUrl;
 
 	public function __construct(
 		StatementSerializer $statementSerializer,
 		ImportedEntityMappingStore $entityMappingStore,
+		LoggerInterface $logger,
 		$apiUrl
 	) {
 		$this->statementSerializer = $statementSerializer;
 		$this->entityMappingStore = $entityMappingStore;
+		$this->logger = $logger;
 		$this->apiUrl = $apiUrl;
 
 		$this->importUser = User::newFromId( 0 );
@@ -51,19 +56,19 @@ class StatementsImporter {
 	public function importStatements( Entity $entity ) {
 		$statements = $entity->getStatements();
 
-		echo "adding statements: " . $entity->getId()->getSerialization() . "\n";
+		$this->logger->info( 'Adding statements: ' . $entity->getId()->getSerialization() );
 
 		if ( !$statements->isEmpty() ) {
 			$localId = $this->entityMappingStore->getLocalId( $entity->getId()->getSerialization() );
 
 			if ( !$localId ) {
-				echo "Entity not found for " . $entity->getId()->getSerialization() . "\n";
+				$this->logger->error( $entity->getId()->getSerialization() .  ' not found' );
 			}
 
 			try {
 				$this->addStatementList( $this->idParser->parse( $localId ), $statements );
 			} catch ( \Exception $ex ) {
-				echo $ex->getMessage() . "\n";
+				$this->logger->error( $ex->getMessage() );
 			}
 		}
 	}
@@ -76,7 +81,7 @@ class StatementsImporter {
 				$serialization = $this->statementSerializer->serialize( $this->copyStatement( $statement ) );
 				$data[] = $serialization;
 			} catch ( \Exception $ex ) {
-				echo $ex->getMessage() . "\n";
+				$this->logger->error( $ex->getMessage() );
 			}
 		}
 
@@ -108,7 +113,7 @@ class StatementsImporter {
 					$localId = $this->entityMappingStore->getLocalId( $value->getEntityId()->getSerialization() );
 
 					if ( !$localId ) {
-						echo "Entity not found for $localId\n";
+						$this->logger->error( "Entity not found for $localId." );
 					}
 
 					$value = new EntityIdValue( $this->idParser->parse( $localId ) );

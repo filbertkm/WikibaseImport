@@ -4,6 +4,7 @@ namespace Wikibase\Import;
 
 use Config;
 use DataValues\Serializers\DataValueSerializer;
+use Psr\Log\LoggerInterface;
 use Wikibase\DataModel\DeserializerFactory;
 use Wikibase\DataModel\SerializerFactory;
 use Wikibase\Repo\WikibaseRepo;
@@ -12,14 +13,17 @@ class EntityImporterFactory {
 
 	private $config;
 
+	private $logger;
+
 	private $entityImporter = null;
 
 	private $statementsImporter = null;
 
 	private $badgeItemUpdater = null;
 
-	public function __construct( Config $config ) {
+	public function __construct( Config $config, LoggerInterface $logger ) {
 		$this->config = $config;
+		$this->logger = $logger;
 	}
 
 	public function newEntityImporter() {
@@ -27,9 +31,10 @@ class EntityImporterFactory {
 			$this->entityImporter = new EntityImporter(
 				$this->newStatementsImporter(),
 				$this->newBadgeItemUpdater(),
-				new ApiEntityLookup( $this->newEntityDeserializer() ),
+				new ApiEntityLookup( $this->newEntityDeserializer(), $this->logger ),
 				WikibaseRepo::getDefaultInstance()->getStore()->getEntityStore(),
 				new ImportedEntityMappingStore( wfGetLB() ),
+				$this->logger,
 				$this->config->get( 'WBImportSourceApi' )
 			);
 		}
@@ -45,6 +50,7 @@ class EntityImporterFactory {
 		return new StatementsImporter(
 			$this->newSerializerFactory()->newStatementSerializer(),
 			new ImportedEntityMappingStore( wfGetLB() ),
+			$this->logger,
 			$this->config->get( 'WBImportSourceApi' )
 		);
 	}

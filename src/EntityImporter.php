@@ -65,8 +65,12 @@ class EntityImporter {
 		foreach( $batches as $batch ) {
 			$entities = $this->apiEntityLookup->getEntities( $batch, $this->apiUrl );
 
-			$badgeItems = $this->getBadgeItems( $entities );
-			$this->importIds( $badgeItems, false );
+			if ( $entities ) {
+				$badgeItems = $this->getBadgeItems( $entities );
+				$this->importIds( $badgeItems, false );
+			} else {
+				$this->logger->error( 'Failed to retrieve badge items' );
+			}
 
 			$stashedEntities = array_merge( $stashedEntities, $this->importBatch( $batch ) );
 		}

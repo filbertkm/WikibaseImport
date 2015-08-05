@@ -57,7 +57,13 @@ class ImportEntities extends \Maintenance {
 		}
 
 		if ( $this->file ) {
-			$ids = array_map( 'trim', file( $file ) );
+			$rows = file( $this->file );
+
+			if ( !is_array( $rows ) ) {
+				$this->logger->error( 'File is invalid.' );
+			}
+
+			$ids = array_map( 'trim', $rows );
 			$entityImporter->importIds( $ids );
 		}
 

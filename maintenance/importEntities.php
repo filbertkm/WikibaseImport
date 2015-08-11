@@ -17,13 +17,19 @@ require_once( "$IP/maintenance/Maintenance.php" );
 
 class ImportEntities extends \Maintenance {
 
+	private $logger;
+
+	private $entityImporter;
+
+	private $propertyIdLister;
+
+	private $idParser;
+
 	private $entity;
 
 	private $file;
 
 	private $allProperties;
-
-	private $apiUrl;
 
 	public function __construct() {
 		parent::__construct();
@@ -44,42 +50,32 @@ class ImportEntities extends \Maintenance {
 			return;
 		}
 
-		$logger = LoggerFactory::getInstance( 'console' );
-
-		$entityImporterFactory = new EntityImporterFactory( $this->getConfig(), $logger );
-		$entityImporter = $entityImporterFactory->newEntityImporter();
+		$this->initServices();
 
 		if ( $this->allProperties ) {
-			$propertyLister = new PropertyLister();
-			$ids = $propertyIdLister->fetch( $this->apiUrl );
-
-			$entityImporter->importIds( $ids );
+			$this->importProperties();
 		}
 
 		if ( $this->file ) {
-			$rows = file( $this->file );
-
-			if ( !is_array( $rows ) ) {
-				$this->logger->error( 'File is invalid.' );
-			}
-
-			$ids = array_map( 'trim', $rows );
-			$entityImporter->importIds( $ids );
+			$this->importIdsFromFile( $filename );
 		}
 
-		if ( $this->entity ) {
-			$idParser = WikibaseRepo::getDefaultInstance()->getEntityIdParser();
-
-			try {
-				$id = $idParser->parse( $this->entity );
-
-				$entityImporter->importIds( array( $id->getSerialization() ) );
-			} catch ( \Exception $ex ) {
-				$logger->error( 'Invalid entity ID' );
-			}
+		if ( $this->entity ){
+			$this->importEntity( $this->entity );
 		}
 
-		$logger->info( 'Done' );
+		$this->logger->info( 'Done' );
+	}
+
+	private function initServices() {
+		$this->logger = LoggerFactory::getInstance( 'console' );
+
+		$entityImporterFactory = new EntityImporterFactory( $this->getConfig(), $this->logger );
+		$this->entityImporter = $entityImporterFactory->newEntityImporter();
+
+		$this->propertyIdLister = new PropertyIdLister();
+
+		$this->idParser = WikibaseRepo::getDefaultInstance()->getEntityIdParser();
 	}
 
 	private function extractOptions() {
@@ -92,6 +88,33 @@ class ImportEntities extends \Maintenance {
 		}
 
 		return true;
+	}
+
+	private function importProperties() {
+		$ids = $this->propertyIdLister->fetch();
+
+		$this->entityImporter->importIds( $ids );
+	}
+
+	private function importIdsFromFile( $filename ) {
+		$rows = file( $filename );
+
+		if ( !is_array( $rows ) ) {
+			$this->logger->error( 'File is invalid.' );
+		}
+
+		$ids = array_map( 'trim', $rows );
+		$this->entityImporter->importIds( $ids );
+	}
+
+	private function importEntity( $entityIdString ) {
+		try {
+			$entityId = $this->idParser->parse( $entityIdString );
+
+			$this->entityImporter->importIds( array( $entityId->getSerialization() ) );
+		} catch ( \Exception $ex ) {
+			$this->logger->error( 'Invalid entity ID' );
+		}
 	}
 
 }

@@ -10,7 +10,7 @@ use Wikibase\DataModel\Entity\EntityIdValue;
 use Wikibase\DataModel\Entity\Item;
 use Wikibase\DataModel\Entity\ItemId;
 use Wikibase\DataModel\Serializers\StatementSerializer;
-use Wikibase\DataModel\Services\EntityId\BasicEntityIdParser;
+use Wikibase\DataModel\Entity\BasicEntityIdParser;
 use Wikibase\DataModel\Snak\PropertyValueSnak;
 use Wikibase\DataModel\Statement\StatementList;
 use Wikibase\Repo\Store\WikiPageEntityStore;
@@ -86,6 +86,12 @@ class EntityImporter {
 
 	private function importBatch( array $batch ) {
 		$entities = $this->apiEntityLookup->getEntities( $batch, $this->apiUrl );
+
+		if ( !is_array( $entities ) ) {
+			$this->logger->error( 'Failed to import batch' );
+
+			return array();
+		}
 
 		$stashedEntities = array();
 

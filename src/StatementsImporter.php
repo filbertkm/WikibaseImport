@@ -36,18 +36,14 @@ class StatementsImporter {
 
 	private $logger;
 
-	private $apiUrl;
-
 	public function __construct(
 		StatementSerializer $statementSerializer,
 		ImportedEntityMappingStore $entityMappingStore,
-		LoggerInterface $logger,
-		$apiUrl
+		LoggerInterface $logger
 	) {
 		$this->statementSerializer = $statementSerializer;
 		$this->entityMappingStore = $entityMappingStore;
 		$this->logger = $logger;
-		$this->apiUrl = $apiUrl;
 
 		$this->importUser = User::newFromId( 0 );
 		$this->idParser = new BasicEntityIdParser();

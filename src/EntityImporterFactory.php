@@ -28,14 +28,19 @@ class EntityImporterFactory {
 
 	public function newEntityImporter() {
 		if ( $this->entityImporter === null ) {
+			$apiEntityLookup = new ApiEntityLookup(
+				$this->newEntityDeserializer(),
+				$this->logger,
+				$this->config->get( 'WBImportSourceApi' )
+			);
+
 			$this->entityImporter = new EntityImporter(
 				$this->newStatementsImporter(),
 				$this->newBadgeItemUpdater(),
-				new ApiEntityLookup( $this->newEntityDeserializer(), $this->logger ),
+				$apiEntityLookup,
 				WikibaseRepo::getDefaultInstance()->getStore()->getEntityStore(),
 				new ImportedEntityMappingStore( wfGetLB() ),
-				$this->logger,
-				$this->config->get( 'WBImportSourceApi' )
+				$this->logger
 			);
 		}
 
@@ -50,8 +55,7 @@ class EntityImporterFactory {
 		return new StatementsImporter(
 			$this->newSerializerFactory()->newStatementSerializer(),
 			new ImportedEntityMappingStore( wfGetLB() ),
-			$this->logger,
-			$this->config->get( 'WBImportSourceApi' )
+			$this->logger
 		);
 	}
 

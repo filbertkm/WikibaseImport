@@ -29,8 +29,6 @@ class EntityImporter {
 
 	private $logger;
 
-	private $apiUrl;
-
 	private $importUser;
 
 	private $batchSize;
@@ -41,8 +39,7 @@ class EntityImporter {
 		ApiEntityLookup $apiEntityLookup,
 		WikiPageEntityStore $entityStore,
 		ImportedEntityMappingStore $entityMappingStore,
-		LoggerInterface $logger,
-		$apiUrl
+		LoggerInterface $logger
 	) {
 		$this->statementsImporter = $statementsImporter;
 		$this->badgeItemUpdater = $badgeItemUpdater;
@@ -50,7 +47,6 @@ class EntityImporter {
 		$this->entityStore = $entityStore;
 		$this->entityMappingStore = $entityMappingStore;
 		$this->logger = $logger;
-		$this->apiUrl = $apiUrl;
 
 		$this->importUser = User::newFromId( 0 );
 
@@ -63,7 +59,7 @@ class EntityImporter {
 		$stashedEntities = array();
 
 		foreach( $batches as $batch ) {
-			$entities = $this->apiEntityLookup->getEntities( $batch, $this->apiUrl );
+			$entities = $this->apiEntityLookup->getEntities( $batch );
 
 			if ( $entities ) {
 				$this->importBadgeItems( $entities );
@@ -84,7 +80,7 @@ class EntityImporter {
 	}
 
 	private function importBatch( array $batch ) {
-		$entities = $this->apiEntityLookup->getEntities( $batch, $this->apiUrl );
+		$entities = $this->apiEntityLookup->getEntities( $batch );
 
 		if ( !is_array( $entities ) ) {
 			$this->logger->error( 'Failed to import batch' );

@@ -24,23 +24,33 @@ class ApiEntityLookup {
 	private $logger;
 
 	/**
+	 * @var string
+	 */
+	private $apiUrl;
+
+	/**
 	 * @param DispatchingDeserializer $deserializer
 	 * @param LoggerInterface $logger
+	 * @param string $apiUrl
 	 */
-	public function __construct( DispatchingDeserializer $deserializer, LoggerInterface $logger ) {
+	public function __construct(
+		DispatchingDeserializer $deserializer,
+		LoggerInterface $logger,
+		$apiUrl
+	) {
 		$this->deserializer = $deserializer;
 		$this->logger = $logger;
+		$this->apiUrl = $apiUrl;
 	}
 
 	/**
 	 * @param string[] $ids
-	 * @param string $apiUrl
 	 *
 	 * @throws RuntimeException
 	 * @return Entity[]
 	 */
-	public function getEntities( array $ids, $apiUrl ) {
-		$data = $this->doRequest( $ids, $apiUrl );
+	public function getEntities( array $ids ) {
+		$data = $this->doRequest( $ids );
 
 		if ( $data && array_key_exists( 'success', $data ) ) {
 			unset( $data['success'] );
@@ -50,7 +60,7 @@ class ApiEntityLookup {
 		 $this->logger->error( 'Api request failed' );
 	}
 
-	private function doRequest( array $ids, $apiUrl ) {
+	private function doRequest( array $ids ) {
 		$params = array(
 			'action' => 'wbgetentities',
 			'ids' => implode( '|', $ids ),
@@ -58,7 +68,7 @@ class ApiEntityLookup {
 		);
 
 		$json = Http::get(
-			wfAppendQuery( $apiUrl, $params ),
+			wfAppendQuery( $this->apiUrl, $params ),
 			array(),
 			__METHOD__
 		);

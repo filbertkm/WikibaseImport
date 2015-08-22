@@ -57,7 +57,7 @@ class ImportEntities extends \Maintenance {
 		}
 
 		if ( $this->file ) {
-			$this->importIdsFromFile( $filename );
+			$this->importEntitiesFromFile( $this->file );
 		}
 
 		if ( $this->entity ){
@@ -93,10 +93,10 @@ class ImportEntities extends \Maintenance {
 	private function importProperties() {
 		$ids = $this->propertyIdLister->fetch();
 
-		$this->entityImporter->importIds( $ids );
+		$this->entityImporter->importEntities( $ids );
 	}
 
-	private function importIdsFromFile( $filename ) {
+	private function importEntitiesFromFile( $filename ) {
 		$rows = file( $filename );
 
 		if ( !is_array( $rows ) ) {
@@ -104,14 +104,14 @@ class ImportEntities extends \Maintenance {
 		}
 
 		$ids = array_map( 'trim', $rows );
-		$this->entityImporter->importIds( $ids );
+		$this->entityImporter->importEntities( $ids );
 	}
 
 	private function importEntity( $entityIdString ) {
 		try {
 			$entityId = $this->idParser->parse( $entityIdString );
 
-			$this->entityImporter->importIds( array( $entityId->getSerialization() ) );
+			$this->entityImporter->importEntities( array( $entityId->getSerialization() ) );
 		} catch ( \Exception $ex ) {
 			$this->logger->error( 'Invalid entity ID' );
 		}

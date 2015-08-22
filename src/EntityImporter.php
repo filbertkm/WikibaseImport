@@ -57,7 +57,7 @@ class EntityImporter {
 		$this->batchSize = 10;
 	}
 
-	public function importIds( array $ids, $importStatements = true ) {
+	public function importEntities( array $ids, $importStatements = true ) {
 		$batches = array_chunk( $ids, $this->batchSize );
 
 		$stashedEntities = array();
@@ -66,8 +66,7 @@ class EntityImporter {
 			$entities = $this->apiEntityLookup->getEntities( $batch, $this->apiUrl );
 
 			if ( $entities ) {
-				$badgeItems = $this->getBadgeItems( $entities );
-				$this->importIds( $badgeItems, false );
+				$this->importBadgeItems( $entities );
 			} else {
 				$this->logger->error( 'Failed to retrieve badge items' );
 			}
@@ -78,7 +77,7 @@ class EntityImporter {
 		if ( $importStatements === true ) {
 			foreach( $stashedEntities as $entity ) {
 				$referencedEntities = $this->getReferencedEntities( $entity );
-				$this->importIds( $referencedEntities, false );
+				$this->importEntities( $referencedEntities, false );
 				$this->statementsImporter->importStatements( $entity );
 			}
 		}
@@ -171,5 +170,10 @@ class EntityImporter {
 
 		return array_unique( $entities );
 	}
+
+    private function importBadgeItems( array $entities ) {
+        $badgeItems = $this->getBadgeItems( $entities );
+        $this->importEntities( $badgeItems, false );
+    }
 
 }

@@ -17,7 +17,7 @@
 		]
 	},
 	"config": {
-		"WBImportSourceApi": "http://wikidatawiki/w/api.php"
+		"WBImportSourceApi": "https://www.wikidata.org/w/api.php"
 	},
 	"MessagesDirs": {
 		"WikibaseImport": [

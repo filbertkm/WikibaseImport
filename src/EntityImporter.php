@@ -29,6 +29,10 @@ class EntityImporter {
 
 	private $logger;
 
+	private $statementsCountLookup;
+
+	private $idParser;
+
 	private $importUser;
 
 	private $batchSize;
@@ -39,6 +43,7 @@ class EntityImporter {
 		ApiEntityLookup $apiEntityLookup,
 		WikiPageEntityStore $entityStore,
 		ImportedEntityMappingStore $entityMappingStore,
+		StatementsCountLookup $statementsCountLookup,
 		LoggerInterface $logger
 	) {
 		$this->statementsImporter = $statementsImporter;
@@ -46,10 +51,11 @@ class EntityImporter {
 		$this->apiEntityLookup = $apiEntityLookup;
 		$this->entityStore = $entityStore;
 		$this->entityMappingStore = $entityMappingStore;
+		$this->statementsCountLookup = $statementsCountLookup;
 		$this->logger = $logger;
 
+		$this->idParser = new BasicEntityIdParser();
 		$this->importUser = User::newFromId( 0 );
-
 		$this->batchSize = 10;
 	}
 
@@ -74,7 +80,17 @@ class EntityImporter {
 			foreach( $stashedEntities as $entity ) {
 				$referencedEntities = $this->getReferencedEntities( $entity );
 				$this->importEntities( $referencedEntities, false );
-				$this->statementsImporter->importStatements( $entity );
+
+				$originalId = $entity->getId()->getSerialization();
+
+				$localId = $this->entityMappingStore->getLocalId( $originalId );
+				$entityId = $this->idParser->parse( $localId );
+
+				if ( !$this->statementsCountLookup->hasStatements( $entityId ) ) {
+					$this->statementsImporter->importStatements( $entity );
+				} else {
+					$this->logger->info( "Statements already imported for $originalId" );
+				}
 			}
 		}
 	}

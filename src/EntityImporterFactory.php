@@ -40,6 +40,7 @@ class EntityImporterFactory {
 				$apiEntityLookup,
 				WikibaseRepo::getDefaultInstance()->getStore()->getEntityStore(),
 				new ImportedEntityMappingStore( wfGetLB() ),
+				new PagePropsStatementCountLookup( wfGetLB() ),
 				$this->logger
 			);
 		}

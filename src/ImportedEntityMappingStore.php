@@ -15,6 +15,10 @@ class ImportedEntityMappingStore {
 		$this->loadBalancer = $loadBalancer;
 	}
 
+	/**
+	 * @param string $originalId
+	 * @param string $localId
+	 */
 	public function add( $originalId, $localId ) {
 		$dbw = $this->loadBalancer->getConnection( DB_MASTER );
 
@@ -28,6 +32,11 @@ class ImportedEntityMappingStore {
 		);
 	}
 
+	/**
+	 * @param string $originalId
+	 *
+	 * @return string
+	 */
 	public function getLocalId( $originalId ) {
 		if ( !is_string( $originalId ) ) {
 			throw new \InvalidArgumentException( '$originalId must be a string' );
@@ -51,6 +60,11 @@ class ImportedEntityMappingStore {
 		return null;
 	}
 
+	/**
+	 * @param string $localId
+	 *
+	 * @return string
+	 */
 	public function getOriginalId( $localId ) {
 		if ( !is_string( $localId ) ) {
 			throw new \InvalidArgumentException( '$localId must be a string' );

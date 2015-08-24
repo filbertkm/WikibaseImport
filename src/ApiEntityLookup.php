@@ -5,13 +5,15 @@ namespace Wikibase\Import;
 use Deserializers\DispatchingDeserializer;
 use Http;
 use Psr\Log\LoggerInterface;
-use Wikibase\Lib\Store\EntityLookup;
+use Wikibase\DataModel\Entity\EntityDocument;
+use Wikibase\DataModel\Entity\EntityId;
+use Wikibase\DataModel\Services\Lookup\EntityLookup;
 
 /**
  * @licence GNU GPL v2+
  * @author Katie Filbert < aude.wiki@gmail.com >
  */
-class ApiEntityLookup {
+class ApiEntityLookup implements EntityLookup {
 
 	/**
 	 * @var DispatchingDeserializer
@@ -44,6 +46,31 @@ class ApiEntityLookup {
 	}
 
 	/**
+	 * @param EntityId $entityId
+	 *
+	 * @return EntityDocument
+	 */
+	public function getEntity( EntityId $entityId ) {
+		$prefixedId = $entityId->getSerialization();
+		$entities = $this->getEntities( array( $prefixedId ) );
+
+		foreach( $entities as $entity ) {
+			return $entity;
+		}
+
+		return null;
+	}
+
+	/**
+	 * @param EntityId $entityId
+	 *
+	 * @return bool
+	 */
+	public function hasEntity( EntityId $entityId ) {
+		return $this->getEntity( $entityId ) !== null;
+	}
+
+	/**
 	 * @param string[] $ids
 	 *
 	 * @throws RuntimeException
@@ -58,6 +85,8 @@ class ApiEntityLookup {
 		}
 
 		 $this->logger->error( 'Api request failed' );
+
+		 return array();
 	}
 
 	private function doRequest( array $ids ) {

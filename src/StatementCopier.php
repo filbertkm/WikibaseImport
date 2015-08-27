@@ -9,6 +9,8 @@ use Wikibase\DataModel\Services\EntityId\BasicEntityIdParser;
 use Wikibase\DataModel\Snak\PropertyNoValueSnak;
 use Wikibase\DataModel\Snak\PropertySomeValueSnak;
 use Wikibase\DataModel\Snak\PropertyValueSnak;
+use Wikibase\DataModel\Reference;
+use Wikibase\DataModel\ReferenceList;
 use Wikibase\DataModel\Snak\Snak;
 use Wikibase\DataModel\Snak\SnakList;
 use Wikibase\DataModel\Statement\Statement;
@@ -30,11 +32,20 @@ class StatementCopier {
 		$this->idParser = new BasicEntityIdParser();
 	}
 
+	/**
+	 * @param Statement $statement
+	 *
+	 * @return Statement
+	 */
 	public function copy( Statement $statement ) {
 		$mainSnak = $this->copySnak( $statement->getMainSnak() );
 		$qualifiers = $this->copyQualifiers( $statement->getQualifiers() );
+		$references = $this->copyReferences( $statement->getReferences() );
 
-		return new Statement( $mainSnak, $qualifiers );
+		$newStatement = new Statement( $mainSnak, $qualifiers, $references );
+		$newStatement->setRank( $statement->getRank() );
+
+		return $newStatement;
 	}
 
 	private function copySnak( Snak $mainSnak ) {
@@ -70,6 +81,22 @@ class StatementCopier {
 		}
 
 		return $newQualifiers;
+	}
+
+	private function copyReferences( ReferenceList $references ) {
+		$newReferences = new ReferenceList();
+
+		foreach( $references as $reference ) {
+			$newReferenceSnaks = array();
+
+			foreach( $reference->getSnaks() as $referenceSnak ) {
+				$newReferenceSnaks[] = $this->copySnak( $referenceSnak );
+			}
+
+			$newReferences->addReference( new Reference( $newReferenceSnaks ) );
+		}
+
+		return $newReferences;
 	}
 
 }

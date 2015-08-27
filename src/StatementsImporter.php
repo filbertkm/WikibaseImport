@@ -30,6 +30,8 @@ class StatementsImporter {
 
 	private $entityMappingStore;
 
+	private $statementCopier;
+
 	private $idParser;
 
 	private $importUser;
@@ -45,6 +47,7 @@ class StatementsImporter {
 		$this->entityMappingStore = $entityMappingStore;
 		$this->logger = $logger;
 
+		$this->statementCopier = new StatementCopier( $entityMappingStore, $logger );
 		$this->importUser = User::newFromId( 0 );
 		$this->idParser = new BasicEntityIdParser();
 	}
@@ -74,8 +77,9 @@ class StatementsImporter {
 
 		foreach( $statements as $statement ) {
 			try {
-				$serialization = $this->statementSerializer->serialize( $this->copyStatement( $statement ) );
-				$data[] = $serialization;
+				$data[] = $this->statementSerializer->serialize(
+					$this->statementCopier->copy( $statement )
+				);
 			} catch ( \Exception $ex ) {
 				$this->logger->error( $ex->getMessage() );
 			}
@@ -88,37 +92,6 @@ class StatementsImporter {
 		);
 
 		$this->doApiRequest( $params );
-	}
-
-	private function copyStatement( Statement $statement ) {
-		$mainSnak = $statement->getMainSnak();
-
-		$newPropertyId = $this->entityMappingStore->getLocalId( $mainSnak->getPropertyId()->getSerialization() );
-
-		switch( $mainSnak->getType() ) {
-			case 'somevalue':
-				$newMainSnak = new PropertySomeValueSnak( new PropertyId( $newPropertyId ) );
-				break;
-			case 'novalue':
-				$newMainSnak = new PropertyNoValueSnak( new PropertyId( $newPropertyId ) );
-				break;
-			default:
-				$value = $mainSnak->getDataValue();
-
-				if ( $value instanceof EntityIdValue ) {
-					$localId = $this->entityMappingStore->getLocalId( $value->getEntityId()->getSerialization() );
-
-					if ( !$localId ) {
-						$this->logger->error( "Entity not found for $localId." );
-					}
-
-					$value = new EntityIdValue( $this->idParser->parse( $localId ) );
-				}
-
-				$newMainSnak = new PropertyValueSnak( new PropertyId( $newPropertyId ), $value );
-		}
-
-		return new Statement( $newMainSnak );
 	}
 
 	private function doApiRequest( array $params ) {

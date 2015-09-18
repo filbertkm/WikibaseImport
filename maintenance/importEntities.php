@@ -3,6 +3,8 @@
 namespace Wikibase\Import\Maintenance;
 
 use MediaWiki\Logger\LoggerFactory;
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
 use Wikibase\Import\EntityImporter;
 use Wikibase\Import\EntityImporterFactory;
 use Wikibase\Import\PropertyIdLister;
@@ -68,7 +70,7 @@ class ImportEntities extends \Maintenance {
 	}
 
 	private function initServices() {
-		$this->logger = LoggerFactory::getInstance( 'console' );
+		$this->logger = $this->newLogger();
 
 		$entityImporterFactory = new EntityImporterFactory( $this->getConfig(), $this->logger );
 		$this->entityImporter = $entityImporterFactory->newEntityImporter();
@@ -76,6 +78,15 @@ class ImportEntities extends \Maintenance {
 		$this->propertyIdLister = new PropertyIdLister();
 
 		$this->idParser = WikibaseRepo::getDefaultInstance()->getEntityIdParser();
+	}
+
+	private function newLogger() {
+		$logger = new Logger( 'wb-import-console' );
+		$logger->pushHandler(
+			new StreamHandler( 'php://stdout' )
+		);
+
+		return $logger;
 	}
 
 	private function extractOptions() {

@@ -7,6 +7,7 @@ use User;
 use Wikibase\DataModel\Entity\BasicEntityIdParser;
 use Wikibase\DataModel\Entity\Entity;
 use Wikibase\DataModel\Entity\EntityId;
+use Wikibase\DataModel\Entity\EntityIdParsingException;
 use Wikibase\DataModel\Entity\EntityIdValue;
 use Wikibase\DataModel\Entity\Item;
 use Wikibase\DataModel\Entity\ItemId;
@@ -84,7 +85,13 @@ class EntityImporter {
 				$originalId = $entity->getId()->getSerialization();
 
 				$localId = $this->entityMappingStore->getLocalId( $originalId );
-				$entityId = $this->idParser->parse( $localId );
+
+				try {
+					$entityId = $this->idParser->parse( $localId );
+				} catch ( EntityIdParsingException $ex ) {
+					$this->logger->error( 'Failed to parse entity id: ' . $localId );
+					continue;
+				}
 
 				if ( !$this->statementsCountLookup->hasStatements( $entityId ) ) {
 					$this->statementsImporter->importStatements( $entity );

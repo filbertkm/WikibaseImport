@@ -1,7 +1,7 @@
 {
 	"name": "wikibase/import",
 	"type": "mediawiki-extension",
-	"description": "Structured data repository for MediaWiki",
+	"description": "Import entities from another Wikibase instance (e.g. Wikidata)",
 	"keywords": [
 		"wikibase",
 		"wikidata"

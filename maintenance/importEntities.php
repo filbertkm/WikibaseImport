@@ -2,8 +2,9 @@
 
 namespace Wikibase\Import\Maintenance;
 
-use MediaWiki\Logger\LoggerFactory;
+use Monolog\Formatter\LineFormatter;
 use Monolog\Logger;
+use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Wikibase\Import\EntityImporter;
 use Wikibase\Import\EntityImporterFactory;
@@ -45,7 +46,7 @@ class ImportEntities extends \Maintenance {
 	private function addOptions() {
 		$this->addOption( 'file', 'File with list of entity ids to import', false, true );
 		$this->addOption( 'entity', 'ID of entity to import', false, true );
-		$this->addOption( 'query', 'Import items with specified property and entity id value', false, true );
+		$this->addOption( 'query', 'Import items with property and entity id value', false, true );
 		$this->addOption( 'all-properties', 'Import all properties', false, true );
 	}
 
@@ -89,10 +90,17 @@ class ImportEntities extends \Maintenance {
 	}
 
 	private function newLogger() {
-		$logger = new Logger( 'wb-import-console' );
-		$logger->pushHandler(
-			new StreamHandler( 'php://stdout' )
-		);
+		$formatter = new LineFormatter( "[%datetime%]: %message%\n" );
+
+		if ( $this->mQuiet ) {
+			$handler = new NullHandler();
+		} else {
+			$handler = new StreamHandler( 'php://stdout' );
+			$handler->setFormatter( $formatter );
+		}
+
+		$logger = new Logger( 'wikibase-import' );
+		$logger->pushHandler( $handler );
 
 		return $logger;
 	}

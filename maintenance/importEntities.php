@@ -8,14 +8,15 @@ use Monolog\Handler\StreamHandler;
 use Wikibase\Import\EntityImporter;
 use Wikibase\Import\EntityImporterFactory;
 use Wikibase\Import\PropertyIdLister;
+use Wikibase\Import\QueryRunner;
 use Wikibase\Repo\WikibaseRepo;
 
 $IP = getenv( 'MW_INSTALL_PATH' );
-if( $IP === false ) {
+if ( $IP === false ) {
 	$IP = __DIR__ . '/../../..';
 }
 
-require_once( "$IP/maintenance/Maintenance.php" );
+require_once "$IP/maintenance/Maintenance.php";
 
 class ImportEntities extends \Maintenance {
 
@@ -26,6 +27,8 @@ class ImportEntities extends \Maintenance {
 	private $propertyIdLister;
 
 	private $idParser;
+
+	private $queryRunner;
 
 	private $entity;
 
@@ -42,6 +45,7 @@ class ImportEntities extends \Maintenance {
 	private function addOptions() {
 		$this->addOption( 'file', 'File with list of entity ids to import', false, true );
 		$this->addOption( 'entity', 'ID of entity to import', false, true );
+		$this->addOption( 'query', 'Import items with specified property and entity id value', false, true );
 		$this->addOption( 'all-properties', 'Import all properties', false, true );
 	}
 
@@ -62,8 +66,12 @@ class ImportEntities extends \Maintenance {
 			$this->importEntitiesFromFile( $this->file );
 		}
 
-		if ( $this->entity ){
+		if ( $this->entity ) {
 			$this->importEntity( $this->entity );
+		}
+
+		if ( $this->query ) {
+			$this->importFromQuery( $this->query );
 		}
 
 		$this->logger->info( 'Done' );
@@ -76,8 +84,8 @@ class ImportEntities extends \Maintenance {
 		$this->entityImporter = $entityImporterFactory->newEntityImporter();
 
 		$this->propertyIdLister = new PropertyIdLister();
-
 		$this->idParser = WikibaseRepo::getDefaultInstance()->getEntityIdParser();
+		$this->queryRunner = new QueryRunner( $this->getConfig() );
 	}
 
 	private function newLogger() {
@@ -93,8 +101,13 @@ class ImportEntities extends \Maintenance {
 		$this->entity = $this->getOption( 'entity' );
 		$this->file = $this->getOption( 'file' );
 		$this->allProperties = $this->getOption( 'all-properties' );
+		$this->query = $this->getOption( 'query' );
 
-		if ( $this->file === null && $this->allProperties === null && $this->entity === null ) {
+		if ( $this->file === null
+			&& $this->allProperties === null
+			&& $this->entity === null
+			&& $this->query === null
+		) {
 			return false;
 		}
 
@@ -126,6 +139,18 @@ class ImportEntities extends \Maintenance {
 		} catch ( \Exception $ex ) {
 			$this->logger->error( 'Invalid entity ID' );
 		}
+	}
+
+	private function importFromQuery( $query ) {
+		$parts = explode( ',', $query );
+
+		$propertyId = $this->idParser->parse( $parts[0] );
+		$valueId = $this->idParser->parse( $parts[1] );
+
+		$ids = $this->queryRunner->getPropertyEntityIdValueMatches( $propertyId, $valueId );
+		$this->logger->info( 'Found ' . count( $ids ) . ' matches' );
+
+		$this->entityImporter->importEntities( $ids );
 	}
 
 }

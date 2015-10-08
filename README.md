@@ -34,5 +34,5 @@ php maintenance/importEntities.php --all-properties
 Import Wikidata entities with specified property:entityId value pair:
 
 ```
-php maintenance/importEntities.php --query P131,Q64
+php maintenance/importEntities.php --query P131:Q64
 ```

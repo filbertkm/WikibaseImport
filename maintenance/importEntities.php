@@ -150,7 +150,7 @@ class ImportEntities extends \Maintenance {
 	}
 
 	private function importFromQuery( $query ) {
-		$parts = explode( ',', $query );
+		$parts = explode( ':', $query );
 
 		$propertyId = $this->idParser->parse( $parts[0] );
 		$valueId = $this->idParser->parse( $parts[1] );

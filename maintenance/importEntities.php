@@ -142,11 +142,10 @@ class ImportEntities extends \Maintenance {
 	private function importEntity( $entityIdString ) {
 		try {
 			$entityId = $this->idParser->parse( $entityIdString );
-
-			$this->entityImporter->importEntities( array( $entityId->getSerialization() ) );
 		} catch ( \Exception $ex ) {
 			$this->logger->error( 'Invalid entity ID' );
 		}
+		$this->entityImporter->importEntities( array( $entityId->getSerialization() ) );
 	}
 
 	private function importFromQuery( $query ) {

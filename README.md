@@ -7,6 +7,24 @@ The script imports the specified entity or entities, including statements, sitel
 
 The script also imports any referenced entities (e.g. properties, badge items, wikibase-item values) without the statements.
 
+Install
+------
+
+Clone ```https://github.com/filbertkm/WikibaseImport.git``` to the extensions folder of your MediaWiki instance.
+
+Then go into the WikibaseImport extension directory and run ```composer update```.
+
+Then, to enable the extension, add it in your ```LocalSettings.php``` file:
+
+```
+require_once "$IP/extensions/WikibaseImport/WikibaseImport.php";
+```
+
+The extension requires a new database table to map entity ids from the foreign
+wiki to corresponding ids in the local wiki.
+
+To add the table, run MediaWiki's ```update.php``` maintenance script.
+
 Usage
 ------
 

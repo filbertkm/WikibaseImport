@@ -24,7 +24,7 @@ class Hooks {
 	 * @return bool
 	 */
 	public static function onUnitTestsList( &$paths ) {
-		$paths[] = __DIR__ . '/tests/phpunit';
+		$paths[] = __DIR__ . '/../tests/phpunit';
 
 		return true;
 	}

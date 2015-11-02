@@ -1,6 +1,8 @@
 WikibaseImport
 ===============
 
+[![Build Status](https://travis-ci.org/filbertkm/WikibaseImport.svg?branch=master)](https://travis-ci.org/filbertkm/WikibaseImport)
+
 WikibaseImport is a MediaWiki extension that provides a maintenance script for importing entities from another Wikibase instance. (e.. Wikidata)
 
 The script imports the specified entity or entities, including statements, sitelinks, labels, descriptions and aliases. The extension tracks the newly assigned entity id and the original id, so that any other entity that references can be linked appropriately.

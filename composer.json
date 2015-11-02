@@ -14,7 +14,7 @@
 	"require": {
 		"php": ">=5.3.2",
 		"benestar/asparagus": "~0.4",
-		"monolog/monolog": "1.14.0"
+		"monolog/monolog": "~1.17.2"
 	},
 	"autoload": {
 		"psr-4": {

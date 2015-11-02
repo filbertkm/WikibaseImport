@@ -26,18 +26,15 @@ class EntityImporterFactory {
 		$this->logger = $logger;
 	}
 
+	/**
+	 * @return EntityImporter
+	 */
 	public function newEntityImporter() {
 		if ( $this->entityImporter === null ) {
-			$apiEntityLookup = new ApiEntityLookup(
-				$this->newEntityDeserializer(),
-				$this->logger,
-				$this->config->get( 'WBImportSourceApi' )
-			);
-
 			$this->entityImporter = new EntityImporter(
 				$this->newStatementsImporter(),
 				$this->newBadgeItemUpdater(),
-				$apiEntityLookup,
+				$this->getApiEntityLookup(),
 				WikibaseRepo::getDefaultInstance()->getStore()->getEntityStore(),
 				new ImportedEntityMappingStore( wfGetLB() ),
 				new PagePropsStatementCountLookup( wfGetLB() ),
@@ -46,6 +43,17 @@ class EntityImporterFactory {
 		}
 
 		return $this->entityImporter;
+	}
+
+	/**
+	 * @return ApiEntityLookup
+	 */
+	public function getApiEntityLookup() {
+		return new ApiEntityLookup(
+			$this->newEntityDeserializer(),
+			$this->logger,
+			$this->config->get( 'WBImportSourceApi' )
+		);
 	}
 
 	private function newBadgeItemUpdater() {

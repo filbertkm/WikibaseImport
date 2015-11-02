@@ -16,6 +16,9 @@
 		"benestar/asparagus": "~0.4",
 		"monolog/monolog": "~1.17.2"
 	},
+	"require-dev": {
+		"phpunit/phpunit": "^3.7.37|~4.5"
+	},
 	"autoload": {
 		"psr-4": {
 			"Wikibase\\Import\\": "src"

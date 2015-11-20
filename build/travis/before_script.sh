@@ -1,5 +1,17 @@
 #! /bin/bash
 
+function install_extension() {
+	wget https://github.com/wikimedia/mediawiki-extensions-$1/archive/master.tar.gz
+	tar -zxf master.tar.gz
+	rm master.tar.gz
+	mv mediawiki-extensions-$1-master wiki/extensions/$1
+
+	cd wiki/extensions/$1
+	composer install --no-interaction --prefer-source
+
+	cd ../../..
+}
+
 set -x
 
 originalDirectory=$(pwd)
@@ -14,12 +26,6 @@ tar -zxf master.tar.gz
 rm master.tar.gz
 mv mediawiki-master wiki
 
-# checkout wikibase
-wget https://github.com/wikimedia/mediawiki-extensions-Wikibase/archive/master.tar.gz
-tar -zxf master.tar.gz
-rm master.tar.gz
-mv mediawiki-extensions-Wikibase-master wiki/extensions/Wikibase
-
 cd wiki
 
 if [ $DBTYPE == "mysql" ]
@@ -30,15 +36,16 @@ fi
 composer install --no-dev
 php maintenance/install.php --dbtype $DBTYPE --dbuser root --dbname its_a_mw --dbpath $(pwd) --pass nyan TravisWiki admin
 
-cd extensions
+cd ..
+
+install_extension 'Wikibase'
+
+cd wiki/extensions
 
 cp -r $originalDirectory WikibaseImport
 
 cd WikibaseImport
-composer install --dev --no-interaction --prefer-source
-
-cd ../Wikibase
-composer install --prefer-source
+composer install --no-interaction --prefer-source
 
 cd ../..
 

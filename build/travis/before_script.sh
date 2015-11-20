@@ -9,7 +9,7 @@ composer self-update
 cd ..
 
 # checkout mediawiki
-wget https://github.com/wikimedia/mediawiki-core/archive/master.tar.gz
+wget https://github.com/wikimedia/mediawiki/archive/master.tar.gz
 tar -zxf master.tar.gz
 rm master.tar.gz
 mv mediawiki-master wiki

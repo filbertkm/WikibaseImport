@@ -60,17 +60,22 @@ class StatementCopier {
 				$value = $mainSnak->getDataValue();
 
 				if ( $value instanceof EntityIdValue ) {
-					$localId = $this->entityMappingStore->getLocalId( $value->getEntityId()->getSerialization() );
-
-					if ( !$localId ) {
-						$this->logger->error( "Entity not found for $localId." );
-					}
-
-					$value = new EntityIdValue( $this->idParser->parse( $localId ) );
+					$value = $this->replaceEntityIdValue( $value );
 				}
 
 				return new PropertyValueSnak( new PropertyId( $newPropertyId ), $value );
 		}
+	}
+
+	private function replaceEntityIdValue( EntityIdValue $value ) {
+		$originalId = $value->getEntityId()->getSerialization();
+		$localId = $this->entityMappingStore->getLocalId( $originalId );
+
+		if ( !$localId ) {
+			$this->logger->error( "Entity not found for $originalId." );
+		}
+
+		return new EntityIdValue( $this->idParser->parse( $localId ) );
 	}
 
 	private function copyQualifiers( SnakList $qualifiers ) {

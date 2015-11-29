@@ -6,6 +6,7 @@ use Monolog\Formatter\LineFormatter;
 use Monolog\Logger;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
+use Wikibase\DataModel\Entity\ItemId;
 use Wikibase\Import\EntityImporter;
 use Wikibase\Import\EntityImporterFactory;
 use Wikibase\Import\PropertyIdLister;
@@ -47,6 +48,7 @@ class ImportEntities extends \Maintenance {
 		$this->addOption( 'file', 'File with list of entity ids to import', false, true );
 		$this->addOption( 'entity', 'ID of entity to import', false, true );
 		$this->addOption( 'query', 'Import items with property and entity id value', false, true );
+		$this->addOption( 'range', 'Range of ids to import', false, true );
 		$this->addOption( 'all-properties', 'Import all properties', false, true );
 	}
 
@@ -69,6 +71,10 @@ class ImportEntities extends \Maintenance {
 
 		if ( $this->entity ) {
 			$this->importEntity( $this->entity );
+		}
+
+		if ( $this->range ) {
+			$this->importRange( $this->range );
 		}
 
 		if ( $this->query ) {
@@ -110,11 +116,13 @@ class ImportEntities extends \Maintenance {
 		$this->file = $this->getOption( 'file' );
 		$this->allProperties = $this->getOption( 'all-properties' );
 		$this->query = $this->getOption( 'query' );
+		$this->range = $this->getOption( 'range' );
 
 		if ( $this->file === null
 			&& $this->allProperties === null
 			&& $this->entity === null
 			&& $this->query === null
+			&& $this->range === null
 		) {
 			return false;
 		}
@@ -145,6 +153,7 @@ class ImportEntities extends \Maintenance {
 		} catch ( \Exception $ex ) {
 			$this->logger->error( 'Invalid entity ID' );
 		}
+
 		$this->entityImporter->importEntities( array( $entityId->getSerialization() ) );
 	}
 
@@ -156,6 +165,27 @@ class ImportEntities extends \Maintenance {
 
 		$ids = $this->queryRunner->getPropertyEntityIdValueMatches( $propertyId, $valueId );
 		$this->logger->info( 'Found ' . count( $ids ) . ' matches' );
+
+		$this->entityImporter->importEntities( $ids );
+	}
+
+	private function importRange( $range ) {
+		$parts = explode( ':', $range );
+
+		$fromId = $this->idParser->parse( $parts[0] );
+		$toId = $this->idParser->parse( $parts[1] );
+
+		if ( !$fromId instanceof ItemId || !$toId instanceof ItemId ) {
+			$this->logger->error( 'Invalid ItemId range specified', 1 );
+		}
+
+		$fromNumeric = $fromId->getNumericId();
+		$toNumeric = $toId->getNumericId();
+
+		$ids = array_map( function( $numericId ) {
+			$id = new ItemId( 'Q' . $numericId );
+			return $id->getSerialization();
+		}, range( $fromNumeric, $toNumeric ) );
 
 		$this->entityImporter->importEntities( $ids );
 	}

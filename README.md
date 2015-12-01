@@ -36,10 +36,10 @@ Import a specific entity:
 php maintenance/importEntities.php --entity Q147
 ```
 
-Import a batch of entities:
+Import a list of entities from a text file:
 
 ```
-php maintenance/importEntities.php --file elements.csv
+php maintenance/importEntities.php --file presidents.csv
 ```
 
 You need to create the csv with a list of entity ids. For example, get a list
@@ -55,4 +55,10 @@ Import Wikidata entities with specified property:entityId value pair:
 
 ```
 php maintenance/importEntities.php --query P131:Q64
+```
+
+Import a range of entities:
+
+```
+php maintenance/importEntities.php --range Q1:Q20
 ```

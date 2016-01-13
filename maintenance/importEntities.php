@@ -49,7 +49,7 @@ class ImportEntities extends \Maintenance {
 		$this->addOption( 'entity', 'ID of entity to import', false, true );
 		$this->addOption( 'query', 'Import items with property and entity id value', false, true );
 		$this->addOption( 'range', 'Range of ids to import', false, true );
-		$this->addOption( 'all-properties', 'Import all properties', false, true );
+		$this->addOption( 'all-properties', 'Import all properties', false, false );
 	}
 
 	public function execute() {

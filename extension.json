@@ -20,7 +20,14 @@
 		]
 	},
 	"config": {
-		"WBImportSourceApi": "https://www.wikidata.org/w/api.php"
+		"WBImportSourceApi": "https://www.wikidata.org/w/api.php",
+		"WBImportQueryUrl": "https://query.wikidata.org/bigdata/namespace/wdq/sparql",
+		"WBImportQueryPrefixes": {
+			"wikibase": "http://wikiba.se/ontology#",
+			"wd": "http://www.wikidata.org/entity/",
+			"wdt": "http://www.wikidata.org/prop/direct/",
+			"rdfs": "http://www.w3.org/2000/01/rdf-schema#"
+		}
 	},
 	"MessagesDirs": {
 		"WikibaseImport": [

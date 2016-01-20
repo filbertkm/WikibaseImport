@@ -20,14 +20,18 @@ class QueryRunner {
 		$propertyText = $propertyId->getSerialization();
 		$valueText = $valueId->getSerialization();
 
-		$queryBuilder = new QueryBuilder( $this->config->get( 'WikidataQueryPrefixes' ) );
+		$queryBuilder = new QueryBuilder( $this->config->get( 'WBImportQueryPrefixes' ) );
 
 		$queryBuilder->select( '?id' )
 			->where( "?id", "wdt:$propertyText", "wd:$valueText" );
 
-		$queryExecuter = new QueryExecuter( $this->config->get( 'WikidataQueryUrl' ) );
+		$queryExecuter = new QueryExecuter( $this->config->get( 'WBImportQueryUrl' ) );
 
 		$results = $queryExecuter->execute( $queryBuilder->getSPARQL() );
+
+		if ( !is_array( $results ) ) {
+			throw new QueryException( 'Query execution failed.' );
+		}
 
 		return $this->parseResults( $results );
 	}

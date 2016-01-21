@@ -137,7 +137,8 @@ class ImportEntities extends \Maintenance {
 	}
 
 	private function importProperties() {
-		$ids = $this->propertyIdLister->fetch();
+		$apiUrl = $this->getConfig()->get( 'WBImportSourceApi' );
+		$ids = $this->propertyIdLister->fetch( $apiUrl );
 
 		$this->entityImporter->importEntities( $ids );
 	}

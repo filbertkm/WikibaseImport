@@ -3,7 +3,6 @@
 namespace Wikibase\Import;
 
 use Http;
-use Psr\Log\LoggerInterface;
 
 /**
  * @licence GNU GPL v2+

@@ -10,24 +10,22 @@ use Wikibase\DataModel\Entity\PropertyId;
 
 class QueryRunner {
 
-	private $config;
+	private $queryBuilder;
+	private $queryExecuter;
 
-	public function __construct( Config $config ) {
-		$this->config = $config;
+	public function __construct( QueryBuilder $queryBuilder, QueryExecuter $queryExecuter ) {
+		$this->queryBuilder = $queryBuilder;
+		$this->queryExecuter = $queryExecuter;
 	}
 
 	public function getPropertyEntityIdValueMatches( PropertyId $propertyId, EntityId $valueId ) {
 		$propertyText = $propertyId->getSerialization();
 		$valueText = $valueId->getSerialization();
 
-		$queryBuilder = new QueryBuilder( $this->config->get( 'WBImportQueryPrefixes' ) );
-
-		$queryBuilder->select( '?id' )
+		$this->queryBuilder->select( '?id' )
 			->where( "?id", "wdt:$propertyText", "wd:$valueText" );
 
-		$queryExecuter = new QueryExecuter( $this->config->get( 'WBImportQueryUrl' ) );
-
-		$results = $queryExecuter->execute( $queryBuilder->getSPARQL() );
+		$results = $this->queryExecuter->execute( $this->queryBuilder->getSPARQL() );
 
 		if ( !is_array( $results ) ) {
 			throw new QueryException( 'Query execution failed.' );

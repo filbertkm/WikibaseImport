@@ -2,6 +2,8 @@
 
 namespace Wikibase\Import\Maintenance;
 
+use Asparagus\QueryBuilder;
+use Asparagus\QueryExecuter;
 use Monolog\Formatter\LineFormatter;
 use Monolog\Logger;
 use Monolog\Handler\NullHandler;
@@ -92,7 +94,11 @@ class ImportEntities extends \Maintenance {
 
 		$this->propertyIdLister = new PropertyIdLister();
 		$this->idParser = WikibaseRepo::getDefaultInstance()->getEntityIdParser();
-		$this->queryRunner = new QueryRunner( $this->getConfig() );
+
+		$this->queryRunner = new QueryRunner(
+			new QueryBuilder( $this->getConfig()->get( 'WBImportQueryPrefixes' ) ),
+			new QueryExecuter( $this->getConfig()->get( 'WBImportQueryUrl' ) )
+		);
 	}
 
 	private function newLogger() {

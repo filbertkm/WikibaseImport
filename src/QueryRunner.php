@@ -40,7 +40,7 @@ class QueryRunner {
 		$pattern = "/^http:\/\/www.wikidata.org\/entity\/([PQ]\d+)$/";
 		$ids = array();
 
-		foreach ( $results['bindings'] as $result ) {
+		foreach ( $results as $result ) {
 			preg_match( $pattern, $result['id']['value'], $matches );
 
 			if ( isset( $matches[1] ) ) {

@@ -31,7 +31,7 @@ class QueryRunner {
 			throw new QueryException( 'Query execution failed.' );
 		}
 
-		return $this->parseResults( $results );
+		return $this->parseResults( $results['bindings'] );
 	}
 
 	private function parseResults( array $results ) {

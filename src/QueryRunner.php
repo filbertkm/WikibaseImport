@@ -4,7 +4,6 @@ namespace Wikibase\Import;
 
 use Asparagus\QueryBuilder;
 use Asparagus\QueryExecuter;
-use Config;
 use Wikibase\DataModel\Entity\EntityId;
 use Wikibase\DataModel\Entity\PropertyId;
 

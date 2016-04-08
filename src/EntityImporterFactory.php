@@ -2,7 +2,6 @@
 
 namespace Wikibase\Import;
 
-use Config;
 use DataValues\Serializers\DataValueSerializer;
 use Psr\Log\LoggerInterface;
 use Wikibase\DataModel\DeserializerFactory;
@@ -11,9 +10,15 @@ use Wikibase\Repo\WikibaseRepo;
 
 class EntityImporterFactory {
 
-	private $config;
-
+	/**
+	 * @var LoggerInterface
+	 */
 	private $logger;
+
+	/**
+	 * @var string
+	 */
+	private $apiUrl;
 
 	private $entityImporter = null;
 
@@ -21,9 +26,13 @@ class EntityImporterFactory {
 
 	private $badgeItemUpdater = null;
 
-	public function __construct( Config $config, LoggerInterface $logger ) {
-		$this->config = $config;
+	/**
+	 * @param LoggerInterface $logger
+	 * @param string $apiUrl
+	 */
+	public function __construct( LoggerInterface $logger, $apiUrl ) {
 		$this->logger = $logger;
+		$this->apiUrl = $apiUrl;
 	}
 
 	/**
@@ -52,7 +61,7 @@ class EntityImporterFactory {
 		return new ApiEntityLookup(
 			$this->newEntityDeserializer(),
 			$this->logger,
-			$this->config->get( 'WBImportSourceApi' )
+			$this->apiUrl
 		);
 	}
 

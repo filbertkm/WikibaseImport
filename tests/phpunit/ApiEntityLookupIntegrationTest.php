@@ -4,7 +4,6 @@ namespace Wikibase\Import\Tests;
 
 use Monolog\Logger;
 use Monolog\Handler\NullHandler;
-use RequestContext;
 use Wikibase\DataModel\Entity\ItemId;
 use Wikibase\DataModel\Entity\PropertyId;
 use Wikibase\Import\EntityImporterFactory;
@@ -13,23 +12,27 @@ class ApiEntityLookupIntegrationTest extends \PHPUnit_Framework_TestCase {
 
 	public function testGetEntity() {
 		$apiEntityLookup = $this->getApiEntityLookup();
-		$item = $apiEntityLookup->getEntity( new ItemId( 'Q64' ) );
+		$item = $apiEntityLookup->getEntity( new ItemId( 'Q60' ) );
 
 		$this->assertInstanceOf( 'Wikibase\DataModel\Entity\Item', $item );
-		$this->assertSame( 'Berlin', $item->getLabel( 'en' ), 'English label is Berlin' );
+		$this->assertSame(
+			'New York City',
+			$item->getFingerprint()->getLabel( 'en' )->getText(),
+			'English label is New York City'
+		);
 
 		$statements = $item->getStatements()->getByPropertyId( new PropertyId( 'P17' ) );
 
 		foreach ( $statements as $statement ) {
 			$mainSnakValue = $statement->getMainSnak()->getDataValue();
-			$this->assertEquals( 'Q183', $mainSnakValue->getEntityId()->getSerialization() );
+			$this->assertEquals( 'Q30', $mainSnakValue->getEntityId()->getSerialization() );
 		}
 	}
 
 	private function getApiEntityLookup() {
 		$entityImporterFactory = new EntityImporterFactory(
-			RequestContext::getMain()->getConfig(),
-			$this->newLogger()
+			$this->newLogger(),
+			'https://www.wikidata.org/w/api.php'
 		);
 
 		return $entityImporterFactory->getApiEntityLookup();

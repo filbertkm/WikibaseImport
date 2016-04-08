@@ -89,7 +89,11 @@ class ImportEntities extends \Maintenance {
 	private function initServices() {
 		$this->logger = $this->newLogger();
 
-		$entityImporterFactory = new EntityImporterFactory( $this->getConfig(), $this->logger );
+		$entityImporterFactory = new EntityImporterFactory(
+			$this->logger,
+			$this->getConfig()->get( 'WBImportSourceApi' )
+		);
+
 		$this->entityImporter = $entityImporterFactory->newEntityImporter();
 
 		$this->propertyIdLister = new PropertyIdLister();

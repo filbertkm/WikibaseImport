@@ -3,24 +3,15 @@
 namespace Wikibase\Import;
 
 use ApiMain;
-use DataValues\Serializers\DataValueSerializer;
 use Serializers\Serializer;
 use FauxRequest;
 use Psr\Log\LoggerInterface;
 use RequestContext;
 use User;
-use Wikibase\DataModel\DeserializerFactory;
 use Wikibase\DataModel\Entity\BasicEntityIdParser;
-use Wikibase\DataModel\Entity\Entity;
+use Wikibase\DataModel\Entity\EntityDocument;
 use Wikibase\DataModel\Entity\EntityId;
-use Wikibase\DataModel\Entity\EntityIdValue;
-use Wikibase\DataModel\Entity\Item;
-use Wikibase\DataModel\Entity\ItemId;
-use Wikibase\DataModel\Entity\PropertyId;
 use Wikibase\DataModel\Serializers\StatementSerializer;
-use Wikibase\DataModel\Snak\PropertyNoValueSnak;
-use Wikibase\DataModel\Snak\PropertySomeValueSnak;
-use Wikibase\DataModel\Snak\PropertyValueSnak;
 use Wikibase\DataModel\Statement\Statement;
 use Wikibase\DataModel\Statement\StatementList;
 
@@ -52,7 +43,7 @@ class StatementsImporter {
 		$this->idParser = new BasicEntityIdParser();
 	}
 
-	public function importStatements( Entity $entity ) {
+	public function importStatements( EntityDocument $entity ) {
 		$statements = $entity->getStatements();
 
 		$this->logger->info( 'Adding statements: ' . $entity->getId()->getSerialization() );

@@ -5,13 +5,11 @@ namespace Wikibase\Import;
 use Psr\Log\LoggerInterface;
 use User;
 use Wikibase\DataModel\Entity\BasicEntityIdParser;
-use Wikibase\DataModel\Entity\Entity;
+use Wikibase\DataModel\Entity\EntityDocument;
 use Wikibase\DataModel\Entity\EntityId;
 use Wikibase\DataModel\Entity\EntityIdParsingException;
 use Wikibase\DataModel\Entity\EntityIdValue;
 use Wikibase\DataModel\Entity\Item;
-use Wikibase\DataModel\Entity\ItemId;
-use Wikibase\DataModel\Serializers\StatementSerializer;
 use Wikibase\DataModel\Snak\PropertyValueSnak;
 use Wikibase\DataModel\Statement\StatementList;
 use Wikibase\Repo\Store\WikiPageEntityStore;
@@ -135,7 +133,7 @@ class EntityImporter {
 		return $stashedEntities;
 	}
 
-	private function createEntity( Entity $entity ) {
+	private function createEntity( EntityDocument $entity ) {
 		$entity->setId( null );
 
 		$entity->setStatements( new StatementList() );
@@ -171,7 +169,7 @@ class EntityImporter {
 		return $badgeItems;
 	}
 
-	private function getReferencedEntities( Entity $entity ) {
+	private function getReferencedEntities( EntityDocument $entity ) {
 		$snaks = $entity->getStatements()->getAllSnaks();
 		$entities = array();
 

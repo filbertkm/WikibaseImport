@@ -9,6 +9,7 @@ use Monolog\Logger;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Wikibase\DataModel\Entity\ItemId;
+use Wikibase\Import\Console\ImportOptions;
 use Wikibase\Import\EntityImporter;
 use Wikibase\Import\EntityImporterFactory;
 use Wikibase\Import\PropertyIdLister;
@@ -34,11 +35,10 @@ class ImportEntities extends \Maintenance {
 
 	private $queryRunner;
 
-	private $entity;
-
-	private $file;
-
-	private $allProperties;
+	/**
+	 * @var ImportOptions
+	 */
+	private $importOptions;
 
 	public function __construct() {
 		parent::__construct();
@@ -55,32 +55,27 @@ class ImportEntities extends \Maintenance {
 	}
 
 	public function execute() {
-		if ( $this->extractOptions() === false ) {
-			$this->maybeHelp( true );
-
-			return;
-		}
-
+		$this->importOptions = $this->extractOptions();
 		$this->initServices();
 
-		if ( $this->allProperties ) {
+		if ( $this->importOptions->hasOption( 'all-properties' ) ) {
 			$this->importProperties();
 		}
 
-		if ( $this->file ) {
-			$this->importEntitiesFromFile( $this->file );
+		if ( $this->importOptions->hasOption( 'file' ) ) {
+			$this->importEntitiesFromFile( $this->importOptions->getOption( 'file' ) );
 		}
 
-		if ( $this->entity ) {
-			$this->importEntity( $this->entity );
+		if ( $this->importOptions->hasOption( 'entity' ) ) {
+			$this->importEntity( $this->importOptions->getOption( 'entity' ) );
 		}
 
-		if ( $this->range ) {
-			$this->importRange( $this->range );
+		if ( $this->importOptions->hasOption( 'range' ) ) {
+			$this->importRange( $this->importOptions->getOption( 'range' ) );
 		}
 
-		if ( $this->query ) {
-			$this->importFromQuery( $this->query );
+		if ( $this->importOptions->hasOption( 'query' ) ) {
+			$this->importFromQuery( $this->importOptions->getOption( 'query' ) );
 		}
 
 		$this->logger->info( 'Done' );
@@ -122,22 +117,18 @@ class ImportEntities extends \Maintenance {
 	}
 
 	private function extractOptions() {
-		$this->entity = $this->getOption( 'entity' );
-		$this->file = $this->getOption( 'file' );
-		$this->allProperties = $this->getOption( 'all-properties' );
-		$this->query = $this->getOption( 'query' );
-		$this->range = $this->getOption( 'range' );
+		$options = array();
+		$validOptions = [ 'entity', 'file', 'all-properties', 'query', 'range' ];
 
-		if ( $this->file === null
-			&& $this->allProperties === null
-			&& $this->entity === null
-			&& $this->query === null
-			&& $this->range === null
-		) {
-			return false;
+		foreach ( $validOptions as $optionName ) {
+			$options[$optionName] = $this->getOption( $optionName );
 		}
 
-		return true;
+		if ( empty( $options ) ) {
+			$this->maybeHelp( true );
+		}
+
+		return new ImportOptions( $options );
 	}
 
 	private function importProperties() {

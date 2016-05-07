@@ -70,7 +70,7 @@ class ImportedEntityMappingStore {
 			throw new \InvalidArgumentException( '$localId must be a string' );
 		}
 
-		$dbw = $this->loadBalaance->getConnection( DB_MASTER );
+		$dbw = $this->loadBalancer->getConnection( DB_MASTER );
 
 		$res = $dbw->selectRow(
 			'wbs_entity_mapping',

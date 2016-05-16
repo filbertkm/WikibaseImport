@@ -4,16 +4,18 @@ namespace Wikibase\Import\Maintenance;
 
 use Asparagus\QueryBuilder;
 use Asparagus\QueryExecuter;
-use Monolog\Formatter\LineFormatter;
-use Monolog\Logger;
-use Monolog\Handler\NullHandler;
-use Monolog\Handler\StreamHandler;
-use Wikibase\DataModel\Entity\ItemId;
+use Config;
+use Exception;
+use Psr\Log\LoggerInterface;
+use Wikibase\DataModel\Entity\EntityIdParser;
 use Wikibase\Import\Console\ImportOptions;
+use Wikibase\Import\EntityId\EntityIdListBuilderFactory;
 use Wikibase\Import\EntityImporter;
 use Wikibase\Import\EntityImporterFactory;
-use Wikibase\Import\PropertyIdLister;
+use Wikibase\Import\LoggerFactory;
 use Wikibase\Import\QueryRunner;
+use Wikibase\Import\PropertyIdLister;
+use Wikibase\Lib\Store\EntityStore;
 use Wikibase\Repo\WikibaseRepo;
 
 $IP = getenv( 'MW_INSTALL_PATH' );
@@ -25,20 +27,10 @@ require_once "$IP/maintenance/Maintenance.php";
 
 class ImportEntities extends \Maintenance {
 
-	private $logger;
-
-	private $entityImporter;
-
-	private $propertyIdLister;
-
-	private $idParser;
-
-	private $queryRunner;
-
 	/**
-	 * @var ImportOptions
+	 * @var LoggerInterface
 	 */
-	private $importOptions;
+	private $logger;
 
 	public function __construct() {
 		parent::__construct();
@@ -55,72 +47,48 @@ class ImportEntities extends \Maintenance {
 	}
 
 	public function execute() {
-		$this->importOptions = $this->extractOptions();
-		$this->initServices();
+		$this->logger = LoggerFactory::newLogger( 'wikibase-import', $this->mQuiet );
 
-		if ( $this->importOptions->hasOption( 'all-properties' ) ) {
-			$this->importProperties();
+		$importOptions = $this->extractOptions();
+
+		$entityIdListBuilderFactory = $this->newEntityIdListBuilderFactory();
+
+		foreach ( $this->getValidOptions() as $option ) {
+			if ( $importOptions->hasOption( $option ) ) {
+				$entityIdListBuilder = $entityIdListBuilderFactory->newEntityIdListBuilder(
+					$option
+				);
+
+				if ( $option === 'all-properties' ) {
+					$input = 'all-properties';
+				} else {
+					$input = $importOptions->getOption( $option );
+				}
+
+				break;
+			}
 		}
 
-		if ( $this->importOptions->hasOption( 'file' ) ) {
-			$this->importEntitiesFromFile( $this->importOptions->getOption( 'file' ) );
-		}
-
-		if ( $this->importOptions->hasOption( 'entity' ) ) {
-			$this->importEntity( $this->importOptions->getOption( 'entity' ) );
-		}
-
-		if ( $this->importOptions->hasOption( 'range' ) ) {
-			$this->importRange( $this->importOptions->getOption( 'range' ) );
-		}
-
-		if ( $this->importOptions->hasOption( 'query' ) ) {
-			$this->importFromQuery( $this->importOptions->getOption( 'query' ) );
-		}
-
-		$this->logger->info( 'Done' );
-	}
-
-	private function initServices() {
-		$this->logger = $this->newLogger();
-
-		$entityImporterFactory = new EntityImporterFactory(
-			$this->logger,
-			$this->getConfig()->get( 'WBImportSourceApi' )
-		);
-
-		$this->entityImporter = $entityImporterFactory->newEntityImporter();
-
-		$this->propertyIdLister = new PropertyIdLister();
-		$this->idParser = WikibaseRepo::getDefaultInstance()->getEntityIdParser();
-
-		$this->queryRunner = new QueryRunner(
-			new QueryBuilder( $this->getConfig()->get( 'WBImportQueryPrefixes' ) ),
-			new QueryExecuter( $this->getConfig()->get( 'WBImportQueryUrl' ) )
-		);
-	}
-
-	private function newLogger() {
-		$formatter = new LineFormatter( "[%datetime%]: %message%\n" );
-
-		if ( $this->mQuiet ) {
-			$handler = new NullHandler();
+		if ( !isset( $entityIdListBuilder ) ) {
+			$this->logger->error( 'No valid import option was provided' );
 		} else {
-			$handler = new StreamHandler( 'php://stdout' );
-			$handler->setFormatter( $formatter );
+			try {
+				$ids = $entityIdListBuilder->getEntityIds( $input );
+
+				$entityImporter = $this->newEntityImporter();
+				$entityImporter->importEntities( $ids );
+			} catch ( Exception $ex ) {
+				$this->logger->error( $ex->getMessage() );
+			}
+
+			$this->logger->info( 'Done' );
 		}
-
-		$logger = new Logger( 'wikibase-import' );
-		$logger->pushHandler( $handler );
-
-		return $logger;
 	}
 
 	private function extractOptions() {
-		$options = array();
-		$validOptions = [ 'entity', 'file', 'all-properties', 'query', 'range' ];
+		$options = [];
 
-		foreach ( $validOptions as $optionName ) {
+		foreach ( $this->getValidOptions() as $optionName ) {
 			$options[$optionName] = $this->getOption( $optionName );
 		}
 
@@ -131,65 +99,33 @@ class ImportEntities extends \Maintenance {
 		return new ImportOptions( $options );
 	}
 
-	private function importProperties() {
-		$apiUrl = $this->getConfig()->get( 'WBImportSourceApi' );
-		$ids = $this->propertyIdLister->fetch( $apiUrl );
-
-		$this->entityImporter->importEntities( $ids );
+	private function getValidOptions() {
+		return [ 'entity', 'file', 'all-properties', 'query', 'range' ];
 	}
 
-	private function importEntitiesFromFile( $filename ) {
-		$rows = file( $filename );
+	private function newEntityIdListBuilderFactory() {
+		$queryRunner = new QueryRunner(
+			new QueryBuilder( $this->getConfig()->get( 'WBImportQueryPrefixes' ) ),
+			new QueryExecuter( $this->getConfig()->get( 'WBImportQueryUrl' ) )
+		);
 
-		if ( !is_array( $rows ) ) {
-			$this->logger->error( 'File is invalid.' );
-		}
-
-		$ids = array_map( 'trim', $rows );
-		$this->entityImporter->importEntities( $ids );
+		return new EntityIdListBuilderFactory(
+			WikibaseRepo::getDefaultInstance()->getEntityIdParser(),
+			new PropertyIdLister(),
+			$queryRunner,
+			$this->getConfig()->get( 'WBImportSourceApi' )
+		);
 	}
 
-	private function importEntity( $entityIdString ) {
-		try {
-			$entityId = $this->idParser->parse( $entityIdString );
-		} catch ( \Exception $ex ) {
-			$this->logger->error( 'Invalid entity ID' );
-		}
+	private function newEntityImporter() {
+		$entityImporterFactory = new EntityImporterFactory(
+			WikibaseRepo::getDefaultInstance()->getStore()->getEntityStore(),
+			wfGetLB(),
+			$this->logger,
+			$this->getConfig()->get( 'WBImportSourceApi' )
+		);
 
-		$this->entityImporter->importEntities( array( $entityId->getSerialization() ) );
-	}
-
-	private function importFromQuery( $query ) {
-		$parts = explode( ':', $query );
-
-		$propertyId = $this->idParser->parse( $parts[0] );
-		$valueId = $this->idParser->parse( $parts[1] );
-
-		$ids = $this->queryRunner->getPropertyEntityIdValueMatches( $propertyId, $valueId );
-		$this->logger->info( 'Found ' . count( $ids ) . ' matches' );
-
-		$this->entityImporter->importEntities( $ids );
-	}
-
-	private function importRange( $range ) {
-		$parts = explode( ':', $range );
-
-		$fromId = $this->idParser->parse( $parts[0] );
-		$toId = $this->idParser->parse( $parts[1] );
-
-		if ( !$fromId instanceof ItemId || !$toId instanceof ItemId ) {
-			$this->logger->error( 'Invalid ItemId range specified', 1 );
-		}
-
-		$fromNumeric = $fromId->getNumericId();
-		$toNumeric = $toId->getNumericId();
-
-		$ids = array_map( function( $numericId ) {
-			$id = new ItemId( 'Q' . $numericId );
-			return $id->getSerialization();
-		}, range( $fromNumeric, $toNumeric ) );
-
-		$this->entityImporter->importEntities( $ids );
+		return $entityImporterFactory->newEntityImporter();
 	}
 
 }

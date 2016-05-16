@@ -3,12 +3,24 @@
 namespace Wikibase\Import;
 
 use DataValues\Serializers\DataValueSerializer;
+use LoadBalancer;
 use Psr\Log\LoggerInterface;
 use Wikibase\DataModel\DeserializerFactory;
 use Wikibase\DataModel\SerializerFactory;
+use Wikibase\Lib\Store\EntityStore;
 use Wikibase\Repo\WikibaseRepo;
 
 class EntityImporterFactory {
+
+	/**
+	 * @var EntityStore
+	 */
+	private $entityStore;
+
+	/**
+	 * @var LoadBalancer
+	 */
+	private $loadBalancer;
 
 	/**
 	 * @var LoggerInterface
@@ -22,15 +34,20 @@ class EntityImporterFactory {
 
 	private $entityImporter = null;
 
-	private $statementsImporter = null;
-
-	private $badgeItemUpdater = null;
-
 	/**
+	 * @param EntityStore $entityStore
+	 * @param LoadBalancer $loadBalancer
 	 * @param LoggerInterface $logger
 	 * @param string $apiUrl
 	 */
-	public function __construct( LoggerInterface $logger, $apiUrl ) {
+	public function __construct(
+		EntityStore $entityStore,
+		LoadBalancer $loadBalancer,
+		LoggerInterface $logger,
+		$apiUrl
+	) {
+		$this->entityStore = $entityStore;
+		$this->loadBalancer = $loadBalancer;
 		$this->logger = $logger;
 		$this->apiUrl = $apiUrl;
 	}
@@ -44,9 +61,9 @@ class EntityImporterFactory {
 				$this->newStatementsImporter(),
 				$this->newBadgeItemUpdater(),
 				$this->getApiEntityLookup(),
-				WikibaseRepo::getDefaultInstance()->getStore()->getEntityStore(),
-				new ImportedEntityMappingStore( wfGetLB() ),
-				new PagePropsStatementCountLookup( wfGetLB() ),
+				$this->entityStore,
+				new ImportedEntityMappingStore( $this->loadBalancer ),
+				new PagePropsStatementCountLookup( $this->loadBalancer ),
 				$this->logger
 			);
 		}
@@ -66,13 +83,13 @@ class EntityImporterFactory {
 	}
 
 	private function newBadgeItemUpdater() {
-		return new BadgeItemUpdater( new ImportedEntityMappingStore( wfGetLB() ) );
+		return new BadgeItemUpdater( new ImportedEntityMappingStore( $this->loadBalancer ) );
 	}
 
 	private function newStatementsImporter() {
 		return new StatementsImporter(
 			$this->newSerializerFactory()->newStatementSerializer(),
-			new ImportedEntityMappingStore( wfGetLB() ),
+			new ImportedEntityMappingStore( $this->loadBalancer ),
 			$this->logger
 		);
 	}

@@ -7,6 +7,7 @@ use Monolog\Handler\NullHandler;
 use Wikibase\DataModel\Entity\ItemId;
 use Wikibase\DataModel\Entity\PropertyId;
 use Wikibase\Import\EntityImporterFactory;
+use Wikibase\Repo\WikibaseRepo;
 
 class ApiEntityLookupIntegrationTest extends \PHPUnit_Framework_TestCase {
 
@@ -31,6 +32,8 @@ class ApiEntityLookupIntegrationTest extends \PHPUnit_Framework_TestCase {
 
 	private function getApiEntityLookup() {
 		$entityImporterFactory = new EntityImporterFactory(
+			WikibaseRepo::getDefaultInstance()->getStore()->getEntityStore(),
+			wfGetLB(),
 			$this->newLogger(),
 			'https://www.wikidata.org/w/api.php'
 		);

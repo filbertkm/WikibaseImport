@@ -4,18 +4,14 @@ namespace Wikibase\Import\Maintenance;
 
 use Asparagus\QueryBuilder;
 use Asparagus\QueryExecuter;
-use Config;
 use Exception;
 use Psr\Log\LoggerInterface;
-use Wikibase\DataModel\Entity\EntityIdParser;
 use Wikibase\Import\Console\ImportOptions;
 use Wikibase\Import\EntityId\EntityIdListBuilderFactory;
-use Wikibase\Import\EntityImporter;
 use Wikibase\Import\EntityImporterFactory;
 use Wikibase\Import\LoggerFactory;
 use Wikibase\Import\QueryRunner;
 use Wikibase\Import\PropertyIdLister;
-use Wikibase\Lib\Store\EntityStore;
 use Wikibase\Repo\WikibaseRepo;
 
 $IP = getenv( 'MW_INSTALL_PATH' );

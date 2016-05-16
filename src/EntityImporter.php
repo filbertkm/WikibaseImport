@@ -6,7 +6,6 @@ use Psr\Log\LoggerInterface;
 use User;
 use Wikibase\DataModel\Entity\BasicEntityIdParser;
 use Wikibase\DataModel\Entity\EntityDocument;
-use Wikibase\DataModel\Entity\EntityId;
 use Wikibase\DataModel\Entity\EntityIdParsingException;
 use Wikibase\DataModel\Entity\EntityIdValue;
 use Wikibase\DataModel\Entity\Item;
@@ -188,9 +187,9 @@ class EntityImporter {
 		return array_unique( $entities );
 	}
 
-    private function importBadgeItems( array $entities ) {
-        $badgeItems = $this->getBadgeItems( $entities );
-        $this->importEntities( $badgeItems, false );
-    }
+	private function importBadgeItems( array $entities ) {
+		$badgeItems = $this->getBadgeItems( $entities );
+		$this->importEntities( $badgeItems, false );
+	}
 
 }

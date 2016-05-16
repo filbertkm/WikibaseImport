@@ -70,7 +70,9 @@ class ImportEntities extends \Maintenance {
 		}
 
 		if ( !isset( $entityIdListBuilder ) ) {
-			$this->logger->error( 'No valid import option was provided' );
+			$this->logger->error( 'ERROR: No valid import option was provided' );
+
+			return;
 		} else {
 			try {
 				$ids = $entityIdListBuilder->getEntityIds( $input );

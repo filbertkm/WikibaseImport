@@ -14,6 +14,7 @@ use Wikibase\DataModel\ReferenceList;
 use Wikibase\DataModel\Snak\Snak;
 use Wikibase\DataModel\Snak\SnakList;
 use Wikibase\DataModel\Statement\Statement;
+use Wikibase\Import\Store\ImportedEntityMappingStore;
 
 class StatementCopier {
 
@@ -49,13 +50,13 @@ class StatementCopier {
 	}
 
 	private function copySnak( Snak $mainSnak ) {
-		$newPropertyId = $this->entityMappingStore->getLocalId( $mainSnak->getPropertyId()->getSerialization() );
+		$newPropertyId = $this->entityMappingStore->getLocalId( $mainSnak->getPropertyId() );
 
 		switch( $mainSnak->getType() ) {
 			case 'somevalue':
-				return new PropertySomeValueSnak( new PropertyId( $newPropertyId ) );
+				return new PropertySomeValueSnak( $newPropertyId );
 			case 'novalue':
-				return new PropertyNoValueSnak( new PropertyId( $newPropertyId ) );
+				return new PropertyNoValueSnak( $newPropertyId );
 			default:
 				$value = $mainSnak->getDataValue();
 
@@ -63,19 +64,19 @@ class StatementCopier {
 					$value = $this->replaceEntityIdValue( $value );
 				}
 
-				return new PropertyValueSnak( new PropertyId( $newPropertyId ), $value );
+				return new PropertyValueSnak( $newPropertyId, $value );
 		}
 	}
 
 	private function replaceEntityIdValue( EntityIdValue $value ) {
-		$originalId = $value->getEntityId()->getSerialization();
+		$originalId = $value->getEntityId();
 		$localId = $this->entityMappingStore->getLocalId( $originalId );
 
 		if ( !$localId ) {
 			$this->logger->error( "Entity not found for $originalId." );
 		}
 
-		return new EntityIdValue( $this->idParser->parse( $localId ) );
+		return new EntityIdValue( $localId );
 	}
 
 	private function copyQualifiers( SnakList $qualifiers ) {

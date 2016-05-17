@@ -6,11 +6,11 @@ use Psr\Log\LoggerInterface;
 use User;
 use Wikibase\DataModel\Entity\BasicEntityIdParser;
 use Wikibase\DataModel\Entity\EntityDocument;
-use Wikibase\DataModel\Entity\EntityIdParsingException;
 use Wikibase\DataModel\Entity\EntityIdValue;
 use Wikibase\DataModel\Entity\Item;
 use Wikibase\DataModel\Snak\PropertyValueSnak;
 use Wikibase\DataModel\Statement\StatementList;
+use Wikibase\Import\Store\ImportedEntityMappingStore;
 use Wikibase\Repo\Store\WikiPageEntityStore;
 
 class EntityImporter {
@@ -79,21 +79,14 @@ class EntityImporter {
 				$referencedEntities = $this->getReferencedEntities( $entity );
 				$this->importEntities( $referencedEntities, false );
 
-				$originalId = $entity->getId()->getSerialization();
+				$localId = $this->entityMappingStore->getLocalId( $entity->getId() );
 
-				$localId = $this->entityMappingStore->getLocalId( $originalId );
-
-				try {
-					$entityId = $this->idParser->parse( $localId );
-				} catch ( EntityIdParsingException $ex ) {
-					$this->logger->error( 'Failed to parse entity id: ' . $localId );
-					continue;
-				}
-
-				if ( !$this->statementsCountLookup->hasStatements( $entityId ) ) {
+				if ( !$this->statementsCountLookup->hasStatements( $localId ) ) {
 					$this->statementsImporter->importStatements( $entity );
 				} else {
-					$this->logger->info( "Statements already imported for $originalId" );
+					$this->logger->info(
+						'Statements already imported for ' . $entity->getId()->getSerialization()
+					);
 				}
 			}
 		}
@@ -112,14 +105,15 @@ class EntityImporter {
 
 		foreach( $entities as $originalId => $entity ) {
 			$stashedEntities[] = $entity->copy();
+			$originalEntityId = $this->idParser->parse( $originalId );
 
-			if ( !$this->entityMappingStore->getLocalId( $originalId ) ) {
+			if ( !$this->entityMappingStore->getLocalId( $originalEntityId ) ) {
 				try {
 					$this->logger->info( "Creating $originalId" );
 
 					$entityRevision = $this->createEntity( $entity );
-					$localId = $entityRevision->getEntity()->getId()->getSerialization();
-					$this->entityMappingStore->add( $originalId, $localId );
+					$localId = $entityRevision->getEntity()->getId();
+					$this->entityMappingStore->add( $originalEntityId, $localId );
 				} catch( \Exception $ex ) {
 					$this->logger->error( "Failed to add $originalId" );
 					$this->logger->error( $ex->getMessage() );

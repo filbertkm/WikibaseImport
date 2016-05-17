@@ -5,6 +5,7 @@ namespace Wikibase\Import;
 use Wikibase\DataModel\Entity\ItemId;
 use Wikibase\DataModel\SiteLink;
 use Wikibase\DataModel\SiteLinkList;
+use Wikibase\Import\Store\ImportedEntityMappingStore;
 
 class BadgeItemUpdater {
 
@@ -41,8 +42,7 @@ class BadgeItemUpdater {
 		$newBadges = array();
 
 		foreach( $siteLink->getBadges() as $badge ) {
-			$localId = $this->entityMappingStore->getLocalId( $badge->getSerialization() );
-			$newBadges[] = new ItemId( $localId );
+			$newBadges[] = $this->entityMappingStore->getLocalId( $badge );
 		}
 
 		return new SiteLink(

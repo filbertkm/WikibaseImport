@@ -50,16 +50,22 @@ class StatementsImporter {
 		$this->logger->info( 'Adding statements: ' . $entity->getId()->getSerialization() );
 
 		if ( !$statements->isEmpty() ) {
-			$localId = $this->entityMappingStore->getLocalId( $entity->getId() );
+			$entityId = $entity->getId();
 
-			if ( !$localId ) {
-				$this->logger->error( $entity->getId()->getSerialization() .  ' not found' );
-			}
+			if ( $entityId instanceof EntityId ) {
+				$localId = $this->entityMappingStore->getLocalId( $entityId );
 
-			try {
-				$this->addStatementList( $localId, $statements );
-			} catch ( \Exception $ex ) {
-				$this->logger->error( $ex->getMessage() );
+				if ( !$localId ) {
+					$this->logger->error( $entityId->getSerialization() .  ' not found' );
+				}
+
+				try {
+					$this->addStatementList( $localId, $statements );
+				} catch ( \Exception $ex ) {
+					$this->logger->error( $ex->getMessage() );
+				}
+			} else {
+				$this->logger->error( 'EntityId not set for entity' );
 			}
 		}
 	}

@@ -46,15 +46,13 @@ class DBImportedEntityMappingStore implements ImportedEntityMappingStore {
 	 * @return EntityId
 	 */
 	public function getLocalId( EntityId $originalId ) {
-        $originalIdString = $originalId->getSerialization();
-
 		$dbw = $this->loadBalancer->getConnection( DB_MASTER );
 
 		$res = $dbw->selectRow(
 			'wbs_entity_mapping',
 			'wbs_local_id',
 			array(
-				'wbs_original_id' => $originalIdString
+				'wbs_original_id' => $originalId->getSerialization()
 			),
 			__METHOD__
 		);
@@ -72,15 +70,13 @@ class DBImportedEntityMappingStore implements ImportedEntityMappingStore {
 	 * @return EntityId
 	 */
 	public function getOriginalId( EntityId $localId ) {
-		$localIdString = $localId->getSerialization();
-
 		$dbw = $this->loadBalancer->getConnection( DB_MASTER );
 
 		$res = $dbw->selectRow(
 			'wbs_entity_mapping',
 			'wbs_original_id',
 			array(
-				'wbs_local_id' => $localIdString
+				'wbs_local_id' => $localId->getSerialization()
 			),
 			__METHOD__
 		);

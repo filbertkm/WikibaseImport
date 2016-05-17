@@ -4,6 +4,9 @@ namespace Wikibase\Import\Tests\EntityId;
 
 use Wikibase\Import\EntityId\AllPropertiesEntityIdListBuilder;
 
+/**
+ * @group WikibaseImport
+ */
 class AllPropertiesEntityIdListBuilderTest extends \PHPUnit_Framework_TestCase {
 
 	public function testGetEntityIds() {

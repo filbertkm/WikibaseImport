@@ -6,6 +6,8 @@ use Wikibase\DataModel\Entity\BasicEntityIdParser;
 use Wikibase\Import\EntityId\RangeEntityIdListBuilder;
 
 /**
+ * @group WikibaseImport
+ *
  * @covers Wikibase\Import\EntityId\RangeEntityIdListBuilder
  */
 class RangeEntityIdListBuilderTest extends \PHPUnit_Framework_TestCase {

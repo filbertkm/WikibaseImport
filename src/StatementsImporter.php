@@ -14,6 +14,7 @@ use Wikibase\DataModel\Entity\EntityId;
 use Wikibase\DataModel\Serializers\StatementSerializer;
 use Wikibase\DataModel\Statement\Statement;
 use Wikibase\DataModel\Statement\StatementList;
+use Wikibase\Import\Store\ImportedEntityMappingStore;
 
 class StatementsImporter {
 
@@ -49,14 +50,14 @@ class StatementsImporter {
 		$this->logger->info( 'Adding statements: ' . $entity->getId()->getSerialization() );
 
 		if ( !$statements->isEmpty() ) {
-			$localId = $this->entityMappingStore->getLocalId( $entity->getId()->getSerialization() );
+			$localId = $this->entityMappingStore->getLocalId( $entity->getId() );
 
 			if ( !$localId ) {
 				$this->logger->error( $entity->getId()->getSerialization() .  ' not found' );
 			}
 
 			try {
-				$this->addStatementList( $this->idParser->parse( $localId ), $statements );
+				$this->addStatementList( $localId, $statements );
 			} catch ( \Exception $ex ) {
 				$this->logger->error( $ex->getMessage() );
 			}

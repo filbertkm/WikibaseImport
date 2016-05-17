@@ -13,7 +13,7 @@
          verbose="true">
     <testsuites>
         <testsuite name="Common">
-            <directory>tests/phpunit</directory>
+            <directory>tests/unit</directory>
         </testsuite>
     </testsuites>
 </phpunit>

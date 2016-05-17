@@ -8,6 +8,7 @@ use Psr\Log\LoggerInterface;
 use Wikibase\DataModel\DeserializerFactory;
 use Wikibase\DataModel\SerializerFactory;
 use Wikibase\Lib\Store\EntityStore;
+use Wikibase\Import\Store\DBImportedEntityMappingStore;
 use Wikibase\Repo\WikibaseRepo;
 
 class EntityImporterFactory {
@@ -21,6 +22,11 @@ class EntityImporterFactory {
 	 * @var LoadBalancer
 	 */
 	private $loadBalancer;
+
+	/**
+	 * @var ImportedEntityMappingStore
+	 */
+	private $importedEntityMappingStore;
 
 	/**
 	 * @var LoggerInterface
@@ -62,7 +68,7 @@ class EntityImporterFactory {
 				$this->newBadgeItemUpdater(),
 				$this->getApiEntityLookup(),
 				$this->entityStore,
-				new ImportedEntityMappingStore( $this->loadBalancer ),
+				$this->getImportedEntityMappingStore(),
 				new PagePropsStatementCountLookup( $this->loadBalancer ),
 				$this->logger
 			);
@@ -83,15 +89,30 @@ class EntityImporterFactory {
 	}
 
 	private function newBadgeItemUpdater() {
-		return new BadgeItemUpdater( new ImportedEntityMappingStore( $this->loadBalancer ) );
+		return new BadgeItemUpdater( $this->getImportedEntityMappingStore() );
 	}
 
 	private function newStatementsImporter() {
+		$wikibaseRepo = WikibaseRepo::getDefaultInstance();
+
 		return new StatementsImporter(
 			$this->newSerializerFactory()->newStatementSerializer(),
-			new ImportedEntityMappingStore( $this->loadBalancer ),
+			$this->getImportedEntityMappingStore(),
 			$this->logger
 		);
+	}
+
+	private function getImportedEntityMappingStore() {
+		if ( $this->importedEntityMappingStore === null ) {
+			$wikibaseRepo = WikibaseRepo::getDefaultInstance();
+
+			$this->importedEntityMappingStore = new DBImportedEntityMappingStore(
+				$this->loadBalancer,
+				$wikibaseRepo->getEntityIdParser()
+			);
+		}
+
+		return $this->importedEntityMappingStore;
 	}
 
 	private function newEntityDeserializer() {

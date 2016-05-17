@@ -9,6 +9,9 @@ use Wikibase\DataModel\Entity\PropertyId;
 use Wikibase\Import\EntityImporterFactory;
 use Wikibase\Repo\WikibaseRepo;
 
+/**
+ * @group WikibaseImport
+ */
 class ApiEntityLookupIntegrationTest extends \PHPUnit_Framework_TestCase {
 
 	public function testGetEntity() {

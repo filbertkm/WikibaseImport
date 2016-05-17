@@ -5,6 +5,8 @@ namespace Wikibase\Import\Tests\EntityId;
 use Wikibase\Import\EntityId\FileEntityIdListBuilder;
 
 /**
+ * @group WikibaseImport
+ *
  * @covers Wikibase\Import\EntityId\FileEntityIdListBuilder
  */
 class FileEntityIdListBuilderTest extends \PHPUnit_Framework_TestCase {

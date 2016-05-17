@@ -6,6 +6,8 @@ use Wikibase\DataModel\Entity\BasicEntityIdParser;
 use Wikibase\Import\EntityId\IndividualEntityIdListBuilder;
 
 /**
+ * @group WikibaseImport
+ *
  * @covers Wikibase\Import\EntityId\IndividualEntityIdListBuilder
  */
 class IndividualEntityIdListBuilderTest extends \PHPUnit_Framework_TestCase {

@@ -9,6 +9,7 @@ use Wikibase\DataModel\DeserializerFactory;
 use Wikibase\DataModel\SerializerFactory;
 use Wikibase\Lib\Store\EntityStore;
 use Wikibase\Import\Store\DBImportedEntityMappingStore;
+use Wikibase\Import\Store\ImportedEntityMappingStore;
 use Wikibase\Repo\WikibaseRepo;
 
 class EntityImporterFactory {
@@ -93,8 +94,6 @@ class EntityImporterFactory {
 	}
 
 	private function newStatementsImporter() {
-		$wikibaseRepo = WikibaseRepo::getDefaultInstance();
-
 		return new StatementsImporter(
 			$this->newSerializerFactory()->newStatementSerializer(),
 			$this->getImportedEntityMappingStore(),

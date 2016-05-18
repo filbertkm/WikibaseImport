@@ -43,7 +43,7 @@ class DBImportedEntityMappingStore implements ImportedEntityMappingStore {
 	/**
 	 * @param EntityId $originalId
 	 *
-	 * @return EntityId
+	 * @return EntityId|null
 	 */
 	public function getLocalId( EntityId $originalId ) {
 		$dbw = $this->loadBalancer->getConnection( DB_MASTER );
@@ -67,7 +67,7 @@ class DBImportedEntityMappingStore implements ImportedEntityMappingStore {
 	/**
 	 * @param EntityId $localId
 	 *
-	 * @return EntityId
+	 * @return EntityId|null
 	 */
 	public function getOriginalId( EntityId $localId ) {
 		$dbw = $this->loadBalancer->getConnection( DB_MASTER );

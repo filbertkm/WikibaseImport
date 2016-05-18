@@ -57,12 +57,12 @@ class StatementsImporter {
 
 				if ( !$localId ) {
 					$this->logger->error( $entityId->getSerialization() .  ' not found' );
-				}
-
-				try {
-					$this->addStatementList( $localId, $statements );
-				} catch ( \Exception $ex ) {
-					$this->logger->error( $ex->getMessage() );
+				} else {
+					try {
+						$this->addStatementList( $localId, $statements );
+					} catch ( \Exception $ex ) {
+						$this->logger->error( $ex->getMessage() );
+					}
 				}
 			} else {
 				$this->logger->error( 'EntityId not set for entity' );

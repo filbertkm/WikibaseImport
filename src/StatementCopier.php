@@ -50,7 +50,13 @@ class StatementCopier {
 	}
 
 	private function copySnak( Snak $mainSnak ) {
-		$newPropertyId = $this->entityMappingStore->getLocalId( $mainSnak->getPropertyId() );
+		$oldPropertyId = $mainSnak->getPropertyId();
+		$newPropertyId = $this->entityMappingStore->getLocalId( $oldPropertyId );
+
+		if ( !$newPropertyId ) {
+			$this->logger->error( "Entity not found for $oldPropertyId." );
+			$newPropertyId = $oldPropertyId;
+		}
 
 		switch( $mainSnak->getType() ) {
 			case 'somevalue':

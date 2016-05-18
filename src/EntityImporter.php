@@ -81,7 +81,7 @@ class EntityImporter {
 
 				$localId = $this->entityMappingStore->getLocalId( $entity->getId() );
 
-				if ( !$this->statementsCountLookup->hasStatements( $localId ) ) {
+				if ( $localId && !$this->statementsCountLookup->hasStatements( $localId ) ) {
 					$this->statementsImporter->importStatements( $entity );
 				} else {
 					$this->logger->info(

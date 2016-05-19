@@ -15,14 +15,14 @@ interface ImportedEntityMappingStore {
 	/**
 	 * @param EntityId $originalId
 	 *
-	 * @return EntityId
+	 * @return EntityId|null
 	 */
 	public function getLocalId( EntityId $originalId );
 
 	/**
 	 * @param EntityId $localId
 	 *
-	 * @return EntityId
+	 * @return EntityId|null
 	 */
 	public function getOriginalId( EntityId $localId );
 

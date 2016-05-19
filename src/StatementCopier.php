@@ -50,7 +50,13 @@ class StatementCopier {
 	}
 
 	private function copySnak( Snak $mainSnak ) {
-		$newPropertyId = $this->entityMappingStore->getLocalId( $mainSnak->getPropertyId() );
+		$oldPropertyId = $mainSnak->getPropertyId();
+		$newPropertyId = $this->entityMappingStore->getLocalId( $oldPropertyId );
+
+		if ( !$newPropertyId ) {
+			$this->logger->error( "Entity not found for $oldPropertyId." );
+			$newPropertyId = $oldPropertyId;
+		}
 
 		switch( $mainSnak->getType() ) {
 			case 'somevalue':
@@ -61,7 +67,13 @@ class StatementCopier {
 				$value = $mainSnak->getDataValue();
 
 				if ( $value instanceof EntityIdValue ) {
-					$value = $this->replaceEntityIdValue( $value );
+					$newValue = $this->replaceEntityIdValue( $value );
+
+					if ( $newValue ) {
+						// If we can't map the id, keep the old one.
+						// replaceEntityIdValue() already logged the issue.
+						$value = $newValue;
+					}
 				}
 
 				return new PropertyValueSnak( $newPropertyId, $value );
@@ -74,6 +86,7 @@ class StatementCopier {
 
 		if ( !$localId ) {
 			$this->logger->error( "Entity not found for $originalId." );
+			return null;
 		}
 
 		return new EntityIdValue( $localId );

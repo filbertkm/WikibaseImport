@@ -68,7 +68,7 @@ class EntityImporter {
 			if ( $entities ) {
 				$this->importBadgeItems( $entities );
 			} else {
-				$this->logger->error( 'Failed to retrieve badge items' );
+				$this->logger->error( 'Failed to retrieve items for batch' );
 			}
 
 			$stashedEntities = array_merge( $stashedEntities, $this->importBatch( $batch ) );

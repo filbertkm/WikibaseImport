@@ -29,6 +29,7 @@ To add the table, run MediaWiki's ```update.php``` maintenance script.
 
 Usage
 ------
+First, navigate to *WikibaseImport* ’s extension folder.
 
 Import a specific entity:
 

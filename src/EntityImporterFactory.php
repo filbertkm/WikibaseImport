@@ -117,10 +117,7 @@ class EntityImporterFactory {
 	private function newEntityDeserializer() {
 		$wikibaseRepo = WikibaseRepo::getDefaultInstance();
 
-		$deserializerFactory = new DeserializerFactory(
-			$wikibaseRepo->getDataValueDeserializer(),
-			$wikibaseRepo->getEntityIdParser()
-		);
+		$deserializerFactory = $wikibaseRepo->getExternalFormatDeserializerFactory();
 
 		return $deserializerFactory->newEntityDeserializer();
 	}

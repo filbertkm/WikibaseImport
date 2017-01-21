@@ -2,15 +2,15 @@
 
 namespace Wikibase\Import\Maintenance;
 
-use Asparagus\QueryBuilder;
-use Asparagus\QueryExecuter;
 use Exception;
+use MediaWiki\MediaWikiServices;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 use Wikibase\Import\Console\ImportOptions;
+use Wikibase\Import\EntityId\EntityIdListBuilder;
 use Wikibase\Import\EntityId\EntityIdListBuilderFactory;
 use Wikibase\Import\EntityImporterFactory;
 use Wikibase\Import\LoggerFactory;
-use Wikibase\Import\QueryRunner;
 use Wikibase\Import\PropertyIdLister;
 use Wikibase\Repo\WikibaseRepo;
 
@@ -28,6 +28,11 @@ class ImportEntities extends \Maintenance {
 	 */
 	private $logger;
 
+	/**
+	 * @var ImportOptions
+	 */
+	private $importOptions;
+
 	public function __construct() {
 		parent::__construct();
 
@@ -44,45 +49,46 @@ class ImportEntities extends \Maintenance {
 
 	public function execute() {
 		$this->logger = LoggerFactory::newLogger( 'wikibase-import', $this->mQuiet );
+		$this->importOptions = $this->extractOptions();
 
-		$importOptions = $this->extractOptions();
+		try {
+			$importMode = $this->getImportMode();
+			$entityIdListBuilder = $this->newEntityIdListBuilder( $importMode );
 
-		$entityIdListBuilderFactory = $this->newEntityIdListBuilderFactory();
+			$input = $this->getInputForMode( $importMode );
+			$ids = $entityIdListBuilder->getEntityIds( $input );
 
-		foreach ( $this->getValidOptions() as $option ) {
-			if ( $importOptions->hasOption( $option ) ) {
-				$entityIdListBuilder = $entityIdListBuilderFactory->newEntityIdListBuilder(
-					$option
-				);
-
-				if ( $option === 'all-properties' ) {
-					$input = 'all-properties';
-				} else {
-					$input = $importOptions->getOption( $option );
-				}
-
-				break;
-			}
+			$entityImporter = $this->newEntityImporter();
+			$entityImporter->importEntities( $ids );
+		}
+		catch ( Exception $ex ) {
+			$this->error( $ex->getMessage() );
 		}
 
-		if ( !isset( $entityIdListBuilder ) ) {
-			$this->logger->error( 'ERROR: No valid import option was provided' );
-
-			return;
-		} else {
-			try {
-				$ids = $entityIdListBuilder->getEntityIds( $input );
-
-				$entityImporter = $this->newEntityImporter();
-				$entityImporter->importEntities( $ids );
-			} catch ( Exception $ex ) {
-				$this->logger->error( $ex->getMessage() );
-			}
-
-			$this->logger->info( 'Done' );
-		}
+		$this->logger->info( 'Done' );
 	}
 
+	/**
+	 * @inheritdoc
+	 */
+	protected function error( $err, $die = 0 ) {
+		$err = "\033[31mERROR:\033[0m $err";
+
+		$this->logger->error( $err );
+		$this->maybeHelp( true );
+	}
+
+	/**
+	 * @return array
+	 */
+	private function getValidOptions() {
+		return [ 'entity', 'file', 'all-properties', 'query', 'range' ];
+	}
+
+	/**
+	 * @return ImportOptions
+	 * @throws RuntimeException
+	 */
 	private function extractOptions() {
 		$options = [];
 
@@ -91,42 +97,65 @@ class ImportEntities extends \Maintenance {
 		}
 
 		if ( empty( $options ) ) {
-			$this->maybeHelp( true );
+			throw new RuntimeException( 'No valid import mode option provided' );
 		}
 
 		return new ImportOptions( $options );
 	}
 
-	private function getValidOptions() {
-		return [ 'entity', 'file', 'all-properties', 'query', 'range' ];
+	/**
+	 * @return string
+	 * @throws RuntimeException
+	 */
+	private function getImportMode() {
+		foreach ( $this->getValidOptions() as $option ) {
+			if ( $this->importOptions->hasOption( $option ) ) {
+				return $option;
+			}
+		}
+
+		throw new RuntimeException( 'No valid import option was provided' );
 	}
 
-	private function newEntityIdListBuilderFactory() {
-		$queryRunner = new QueryRunner(
-			new QueryBuilder( $this->getConfig()->get( 'WBImportQueryPrefixes' ) ),
-			new QueryExecuter( $this->getConfig()->get( 'WBImportQueryUrl' ) )
-		);
+	/**
+	 * @param string $mode
+	 * @return mixed
+	 */
+	private function getInputForMode( $mode ) {
+		if ( $mode === 'all-properties' ) {
+			return 'all-properties';
+		} else {
+			return $this->importOptions->getOption( $mode );
+		}
+	}
 
-		return new EntityIdListBuilderFactory(
+	/**
+	 * @param string $importMode
+	 * @return EntityIdListBuilder
+	 */
+	private function newEntityIdListBuilder( $importMode ) {
+		$entityIdListBuilderFactory = new EntityIdListBuilderFactory(
 			WikibaseRepo::getDefaultInstance()->getEntityIdParser(),
 			new PropertyIdLister(),
-			$queryRunner,
+			$this->getConfig()->get( 'WBImportQueryPrefixes' ),
+			$this->getConfig()->get( 'WBImportQueryUrl' ),
 			$this->getConfig()->get( 'WBImportSourceApi' )
 		);
+
+		return $entityIdListBuilderFactory->newEntityIdListBuilder( $importMode );
 	}
 
 	private function newEntityImporter() {
 		$entityImporterFactory = new EntityImporterFactory(
 			WikibaseRepo::getDefaultInstance()->getStore()->getEntityStore(),
-			wfGetLB(),
+			MediaWikiServices::getInstance()->getDBLoadBalancer(),
 			$this->logger,
 			$this->getConfig()->get( 'WBImportSourceApi' )
 		);
 
 		return $entityImporterFactory->newEntityImporter();
 	}
-
 }
 
-$maintClass = "Wikibase\Import\Maintenance\ImportEntities";
+$maintClass = ImportEntities::class;
 require_once RUN_MAINTENANCE_IF_MAIN;

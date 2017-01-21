@@ -25,11 +25,14 @@ class LoggerFactory {
 			throw new InvalidArgumentException( '$quietMode must be boolean' );
 		}
 
-		$formatter = new LineFormatter( "[%datetime%]: %message%\n" );
+		// unused
+		$dateTimeFormatter = new LineFormatter( "[%datetime%]: %message%\n" );
 
 		if ( $quietMode === true ) {
 			$handler = new NullHandler();
 		} else {
+			$formatter = new LineFormatter( "%message%\n");
+
 			$handler = new StreamHandler( 'php://stdout' );
 			$handler->setFormatter( $formatter );
 		}

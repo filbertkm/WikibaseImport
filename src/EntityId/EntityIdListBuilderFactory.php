@@ -2,6 +2,8 @@
 
 namespace Wikibase\Import\EntityId;
 
+use Asparagus\QueryBuilder;
+use Asparagus\QueryExecuter;
 use InvalidArgumentException;
 use Wikibase\DataModel\Entity\EntityIdParser;
 use Wikibase\Import\PropertyIdLister;
@@ -20,9 +22,14 @@ class EntityIdListBuilderFactory {
 	private $propertyIdLister;
 
 	/**
-	 * @var QueryRunner
+	 * @var array
 	 */
-	private $queryRunner;
+	private $queryPrefixes;
+
+	/**
+	 * @var string
+	 */
+	private $queryUrl;
 
 	/**
 	 * @var string
@@ -32,18 +39,18 @@ class EntityIdListBuilderFactory {
 	/**
 	 * @param EntityIdParser $idParser
 	 * @param PropertyIdLister $propertyIdLister
-	 * @param QueryRunner $queryRunner
+	 * @param array $queryPrefixes
+	 * @param string $queryUrl
 	 * @param string $apiUrl
 	 */
 	public function __construct(
-		EntityIdParser $idParser,
-		PropertyIdLister $propertyIdLister,
-		QueryRunner $queryRunner,
-		$apiUrl
+		EntityIdParser $idParser, PropertyIdLister $propertyIdLister, array $queryPrefixes,
+		$queryUrl, $apiUrl
 	) {
 		$this->idParser = $idParser;
 		$this->propertyIdLister = $propertyIdLister;
-		$this->queryRunner = $queryRunner;
+		$this->queryPrefixes = $queryPrefixes;
+		$this->queryUrl = $queryUrl;
 		$this->apiUrl = $apiUrl;
 	}
 
@@ -71,10 +78,7 @@ class EntityIdListBuilderFactory {
 	}
 
 	private function newAllPropertiesEntityIdListBuilder() {
-		return new AllPropertiesEntityIdListBuilder(
-			$this->propertyIdLister,
-			$this->apiUrl
-		);
+		return new AllPropertiesEntityIdListBuilder( $this->propertyIdLister, $this->apiUrl );
 	}
 
 	private function newFileEntityIdListBuilder() {
@@ -86,10 +90,12 @@ class EntityIdListBuilderFactory {
 	}
 
 	private function newQueryEntityIdListBuilder() {
-		return new QueryEntityIdListBuilder(
-			$this->idParser,
-			$this->queryRunner
-		);
+		return new QueryEntityIdListBuilder( $this->idParser, $this->newQueryRunner() );
+	}
+
+	private function newQueryRunner() {
+		return new QueryRunner( new QueryBuilder( $this->queryPrefixes ),
+			new QueryExecuter( $this->queryUrl ) );
 	}
 
 	private function newRangeEntityIdListBuilder() {

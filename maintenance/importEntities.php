@@ -52,14 +52,16 @@ class ImportEntities extends \Maintenance {
 		$this->importOptions = $this->extractOptions();
 
 		try {
-			$importMode = $this->getImportMode();
-			$entityIdListBuilder = $this->newEntityIdListBuilder( $importMode );
+			foreach ( $this->importOptions as $importMode => $input ) {
+				$this->output( "Importing $importMode\n" );
 
-			$input = $this->getInputForMode( $importMode );
-			$ids = $entityIdListBuilder->getEntityIds( $input );
+				$entityIdListBuilder = $this->newEntityIdListBuilder( $importMode );
 
-			$entityImporter = $this->newEntityImporter();
-			$entityImporter->importEntities( $ids );
+				$ids = $entityIdListBuilder->getEntityIds( $input );
+
+				$entityImporter = $this->newEntityImporter();
+				$entityImporter->importEntities( $ids );
+			}
 		}
 		catch ( Exception $ex ) {
 			$this->error( $ex->getMessage() );
@@ -93,7 +95,9 @@ class ImportEntities extends \Maintenance {
 		$options = [];
 
 		foreach ( $this->getValidOptions() as $optionName ) {
-			$options[$optionName] = $this->getOption( $optionName );
+			if ( $this->hasOption( $optionName ) ) {
+				$options[$optionName] = $this->getOptionValue( $optionName );
+			}
 		}
 
 		if ( empty( $options ) ) {
@@ -104,28 +108,14 @@ class ImportEntities extends \Maintenance {
 	}
 
 	/**
-	 * @return string
-	 * @throws RuntimeException
-	 */
-	private function getImportMode() {
-		foreach ( $this->getValidOptions() as $option ) {
-			if ( $this->importOptions->hasOption( $option ) ) {
-				return $option;
-			}
-		}
-
-		throw new RuntimeException( 'No valid import option was provided' );
-	}
-
-	/**
-	 * @param string $mode
+	 * @param string $optionName
 	 * @return mixed
 	 */
-	private function getInputForMode( $mode ) {
-		if ( $mode === 'all-properties' ) {
+	private function getOptionValue( $optionName ) {
+		if ( $optionName === 'all-properties' ) {
 			return 'all-properties';
 		} else {
-			return $this->importOptions->getOption( $mode );
+			return $this->getOption( $optionName );
 		}
 	}
 

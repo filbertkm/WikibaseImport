@@ -44,8 +44,11 @@ class EntityIdListBuilderFactory {
 	 * @param string $apiUrl
 	 */
 	public function __construct(
-		EntityIdParser $idParser, PropertyIdLister $propertyIdLister, array $queryPrefixes,
-		$queryUrl, $apiUrl
+		EntityIdParser $idParser,
+		PropertyIdLister $propertyIdLister,
+		array $queryPrefixes,
+		$queryUrl,
+		$apiUrl
 	) {
 		$this->idParser = $idParser;
 		$this->propertyIdLister = $propertyIdLister;

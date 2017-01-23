@@ -6,11 +6,11 @@ use Exception;
 use MediaWiki\MediaWikiServices;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
-use Wikibase\Import\Console\ImportOptions;
 use Wikibase\Import\EntityId\EntityIdListBuilder;
 use Wikibase\Import\EntityId\EntityIdListBuilderFactory;
 use Wikibase\Import\EntityImporterFactory;
 use Wikibase\Import\LoggerFactory;
+use Wikibase\Import\Maintenance\ImportOptions;
 use Wikibase\Import\PropertyIdLister;
 use Wikibase\Repo\WikibaseRepo;
 

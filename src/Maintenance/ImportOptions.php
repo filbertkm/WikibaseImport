@@ -1,6 +1,6 @@
 <?php
 
-namespace Wikibase\Import\Console;
+namespace Wikibase\Import\Maintenance;
 
 use ArrayIterator;
 use IteratorAggregate;

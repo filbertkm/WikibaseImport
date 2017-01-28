@@ -5,7 +5,7 @@ if ( function_exists( 'wfLoadExtension' ) ) {
 		require_once __DIR__ . '/vendor/autoload.php';
 	}
 
-	wfLoadExtension( 'WikibaseImport' );
+	wfLoadExtension( 'WikibaseImport', __DIR__ . '/extension.json' );
 } else {
 	die( 'WikibaseImport requires MediaWiki 1.25+' );
 }

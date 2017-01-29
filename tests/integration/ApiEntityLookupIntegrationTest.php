@@ -2,6 +2,7 @@
 
 namespace Wikibase\Import\Tests;
 
+use MediaWiki\MediaWikiServices;
 use Monolog\Logger;
 use Monolog\Handler\NullHandler;
 use Wikibase\DataModel\Entity\ItemId;
@@ -36,7 +37,7 @@ class ApiEntityLookupIntegrationTest extends \PHPUnit_Framework_TestCase {
 	private function getApiEntityLookup() {
 		$entityImporterFactory = new EntityImporterFactory(
 			WikibaseRepo::getDefaultInstance()->getStore()->getEntityStore(),
-			wfGetLB(),
+			MediaWikiServices::getInstance()->getDBLoadBalancer(),
 			$this->newLogger(),
 			'https://www.wikidata.org/w/api.php'
 		);

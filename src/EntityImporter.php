@@ -3,188 +3,110 @@
 namespace Wikibase\Import;
 
 use Psr\Log\LoggerInterface;
-use User;
 use Wikibase\DataModel\Entity\BasicEntityIdParser;
 use Wikibase\DataModel\Entity\EntityDocument;
 use Wikibase\DataModel\Entity\EntityId;
 use Wikibase\DataModel\Entity\EntityIdValue;
 use Wikibase\DataModel\Entity\Item;
 use Wikibase\DataModel\Snak\PropertyValueSnak;
-use Wikibase\DataModel\Statement\StatementList;
 use Wikibase\DataModel\Statement\StatementListProvider;
 use Wikibase\Import\Store\ImportedEntityMappingStore;
-use Wikibase\Repo\Store\WikiPageEntityStore;
 
 class EntityImporter {
 
 	private $statementsImporter;
 
-	private $badgeItemUpdater;
-
 	private $apiEntityLookup;
 
-	private $entityStore;
+	private $entitySaver;
 
 	private $entityMappingStore;
 
 	private $logger;
 
-	private $statementsCountLookup;
-
 	private $idParser;
-
-	private $importUser;
 
 	private $batchSize;
 
 	public function __construct(
 		StatementsImporter $statementsImporter,
-		BadgeItemUpdater $badgeItemUpdater,
 		ApiEntityLookup $apiEntityLookup,
-		WikiPageEntityStore $entityStore,
+		EntitySaver $entitySaver,
 		ImportedEntityMappingStore $entityMappingStore,
-		StatementsCountLookup $statementsCountLookup,
 		LoggerInterface $logger
 	) {
 		$this->statementsImporter = $statementsImporter;
-		$this->badgeItemUpdater = $badgeItemUpdater;
 		$this->apiEntityLookup = $apiEntityLookup;
-		$this->entityStore = $entityStore;
+		$this->entitySaver = $entitySaver;
 		$this->entityMappingStore = $entityMappingStore;
-		$this->statementsCountLookup = $statementsCountLookup;
 		$this->logger = $logger;
 
 		$this->idParser = new BasicEntityIdParser();
-		$this->importUser = User::newFromId( 0 );
 		$this->batchSize = 10;
 	}
 
 	public function importEntities( array $ids, $importStatements = true ) {
-		$batches = array_chunk( $ids, $this->batchSize );
+		$entityIdBatches = array_chunk( $ids, $this->batchSize );
 
-		$stashedEntities = array();
+		$stashedEntities = [];
 
-		foreach ( $batches as $batch ) {
-			$entities = $this->apiEntityLookup->getEntities( $batch );
+		foreach ( $entityIdBatches as $entityIds ) {
+			$entities = $this->apiEntityLookup->getEntities( $entityIds );
 
-			if ( $entities ) {
-				$this->importBadgeItems( $entities );
-			} else {
-				$this->logger->error( 'Failed to import badge items' );
+			if ( empty( $entities ) ) {
+				$this->logger->error( "[EntityImporter] Failed to lookup entities" );
+				continue;
 			}
 
-			$stashedEntities = array_merge( $stashedEntities, $this->importBatch( $batch ) );
+			$this->importBadgeItems( $entities );
+			$stashedEntities = array_merge( $stashedEntities, $this->importBatch( $entities ) );
 		}
 
 		if ( $importStatements === true ) {
-			$this->importStatements( $stashedEntities );
+			$this->importStatementsOfEntities( $stashedEntities );
 		}
 	}
 
 	/**
 	 * @param array $stashedEntities
 	 */
-	private function importStatements( array $stashedEntities ) {
+	private function importStatementsOfEntities( array $stashedEntities ) {
 		foreach ( $stashedEntities as $entity ) {
 			$entityId = $entity->getId();
 
 			if ( !$entityId instanceof EntityId ) {
 				$this->logger->error( 'Referenced entity does not have a valid entity id' );
-				continue;
+				return;
 			}
 
 			if ( !$entity instanceof StatementListProvider ) {
-				$this->logger->info( "Referenced entity is not a StatementListProvider" );
+				$this->logger->error( "Entity " . $entityId->getSerialization()
+					. " is not a StatementListProvider" );
 				continue;
 			}
 
-			$referencedEntities = $this->getReferencedEntities( $entity );
-			$this->importEntities( $referencedEntities, false );
-
-			$localId = $this->entityMappingStore->getLocalId( $entity->getId() );
-
-			if ( $localId && !$this->statementsCountLookup->hasStatements( $localId ) ) {
-				$this->statementsImporter->importStatements( $entity->getStatements(), $entityId );
-			} else {
-				$this->logger->info(
-					'Statements already imported for ' . $entity->getId()->getSerialization()
-				);
-			}
+			$this->importStatements( $entity, $entityId );
 		}
 	}
 
-	private function importBatch( array $batch ) {
-		$entities = $this->apiEntityLookup->getEntities( $batch );
-		$stashedEntities = [];
+	/**
+	 * @param StatementListProvider $entity
+	 * @param EntityId $entityId
+	 */
+	private function importStatements( StatementListProvider $entity, EntityId $entityId ) {
+		$referencedEntities = $this->getReferencedEntities( $entity );
+		$this->importEntities( $referencedEntities, false );
 
-		if ( !is_array( $entities ) ) {
-			$this->logger->error( 'Failed to import batch' );
-
-			return $stashedEntities;
-		}
-
-		foreach ( $entities as $originalId => $entity ) {
-			$stashedEntities[] = $entity->copy();
-			$originalEntityId = $this->idParser->parse( $originalId );
-
-			if ( !$this->entityMappingStore->getLocalId( $originalEntityId ) ) {
-				try {
-					$this->logger->info( "Creating $originalId" );
-
-					$entityRevision = $this->createEntity( $entity );
-					$localId = $entityRevision->getEntity()->getId();
-					$this->entityMappingStore->add( $originalEntityId, $localId );
-				} catch ( \Exception $ex ) {
-					$this->logger->error( "Failed to add $originalId" );
-					$this->logger->error( $ex->getMessage() );
-				}
-			} else {
-				$this->logger->info( "$originalId already imported" );
-			}
-		}
-
-		return $stashedEntities;
+		$this->statementsImporter->importStatements( $entity, $entityId );
 	}
 
-	private function createEntity( EntityDocument $entity ) {
-		$entity->setId( null );
-
-		$entity->setStatements( new StatementList() );
-
-		if ( $entity instanceof Item ) {
-			$siteLinkList = $this->badgeItemUpdater->replaceBadges( $entity->getSiteLinkList() );
-			$entity->setSiteLinkList( $siteLinkList );
-		}
-
-		return $this->entityStore->saveEntity(
-			$entity,
-			'Import entity',
-			$this->importUser,
-			EDIT_NEW
-		);
-	}
-
-	private function getBadgeItems( array $entities ) {
-		$badgeItems = array();
-
-		foreach ( $entities as $entity ) {
-			if ( !$entity instanceof Item ) {
-				continue;
-			}
-
-			foreach ( $entity->getSiteLinks() as $siteLink ) {
-				foreach ( $siteLink->getBadges() as $badge ) {
-					$badgeItems[] = $badge->getSerialization();
-				}
-			}
-		}
-
-		return $badgeItems;
-	}
-
-	private function getReferencedEntities( EntityDocument $entity ) {
+	/**
+	 * @param StatementListProvider $entity
+	 * @return array
+	 */
+	private function getReferencedEntities( StatementListProvider $entity ) {
 		$snaks = $entity->getStatements()->getAllSnaks();
-		$entities = array();
+		$entities = [];
 
 		foreach ( $snaks as $snak ) {
 			$entities[] = $snak->getPropertyId()->getSerialization();
@@ -201,9 +123,58 @@ class EntityImporter {
 		return array_unique( $entities );
 	}
 
+	/**
+	 * @param EntityDocument[] $entities
+	 * @return EntityDocument[]
+	 */
+	private function importBatch( array $entities ) {
+		$stashedEntities = [];
+
+		foreach ( $entities as $originalId => $entity ) {
+			$stashedEntities[] = $entity->copy();
+			$originalEntityId = $this->idParser->parse( $originalId );
+
+			if ( !$this->entityMappingStore->getLocalId( $originalEntityId ) ) {
+				try {
+					$this->logger->info( "Creating referenced entity: $originalId" );
+
+					$entityRevision = $this->entitySaver->saveEntity( $entity );
+					$localId = $entityRevision->getEntity()->getId();
+					$this->entityMappingStore->add( $originalEntityId, $localId );
+				} catch ( \Exception $ex ) {
+					$this->logger->error( "Failed to create referenced entity: $originalId" );
+					$this->logger->error( $ex->getMessage() );
+				}
+			}
+		}
+
+		return $stashedEntities;
+	}
+
+	private function getBadgeItems( array $entities ) {
+		$badgeItems = [];
+
+		foreach ( $entities as $entity ) {
+			if ( !$entity instanceof Item ) {
+				continue;
+			}
+
+			foreach ( $entity->getSiteLinkList() as $siteLink ) {
+				foreach ( $siteLink->getBadges() as $badge ) {
+					$badgeItems[] = $badge->getSerialization();
+				}
+			}
+		}
+
+		return $badgeItems;
+	}
+
 	private function importBadgeItems( array $entities ) {
 		$badgeItems = $this->getBadgeItems( $entities );
-		$this->importEntities( $badgeItems, false );
+
+		if ( !empty( $badgeItems ) ) {
+			$this->importEntities( $badgeItems, false );
+		}
 	}
 
 }

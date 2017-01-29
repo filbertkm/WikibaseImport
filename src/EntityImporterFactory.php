@@ -5,11 +5,12 @@ namespace Wikibase\Import;
 use DataValues\Serializers\DataValueSerializer;
 use LoadBalancer;
 use Psr\Log\LoggerInterface;
-use Wikibase\DataModel\DeserializerFactory;
+use User;
 use Wikibase\DataModel\SerializerFactory;
-use Wikibase\Lib\Store\EntityStore;
+use Wikibase\Import\Api\MediaWikiApiClient;
 use Wikibase\Import\Store\DBImportedEntityMappingStore;
 use Wikibase\Import\Store\ImportedEntityMappingStore;
+use Wikibase\Lib\Store\EntityStore;
 use Wikibase\Repo\WikibaseRepo;
 
 class EntityImporterFactory {
@@ -39,8 +40,6 @@ class EntityImporterFactory {
 	 */
 	private $apiUrl;
 
-	private $entityImporter = null;
-
 	/**
 	 * @param EntityStore $entityStore
 	 * @param LoadBalancer $loadBalancer
@@ -63,19 +62,23 @@ class EntityImporterFactory {
 	 * @return EntityImporter
 	 */
 	public function newEntityImporter() {
-		if ( $this->entityImporter === null ) {
-			$this->entityImporter = new EntityImporter(
-				$this->newStatementsImporter(),
-				$this->newBadgeItemUpdater(),
-				$this->getApiEntityLookup(),
-				$this->entityStore,
-				$this->getImportedEntityMappingStore(),
-				new PagePropsStatementCountLookup( $this->loadBalancer ),
-				$this->logger
-			);
-		}
+		$entityDuplicator = new EntityDuplicator(
+			$this->newBadgeItemUpdater()
+		);
 
-		return $this->entityImporter;
+		$entitySaver = new EntitySaver(
+			$entityDuplicator,
+			$this->entityStore,
+			User::newFromId( 0 )
+		);
+
+		return new EntityImporter(
+			$this->newStatementsImporter(),
+			$this->getApiEntityLookup(),
+			$entitySaver,
+			$this->getImportedEntityMappingStore(),
+			$this->logger
+		);
 	}
 
 	/**
@@ -84,8 +87,8 @@ class EntityImporterFactory {
 	public function getApiEntityLookup() {
 		return new ApiEntityLookup(
 			$this->newEntityDeserializer(),
-			$this->logger,
-			$this->apiUrl
+			new MediaWikiApiClient( $this->apiUrl ),
+			$this->logger
 		);
 	}
 
@@ -96,6 +99,7 @@ class EntityImporterFactory {
 	private function newStatementsImporter() {
 		return new StatementsImporter(
 			$this->newSerializerFactory()->newStatementSerializer(),
+			new PagePropsStatementCountLookup( $this->loadBalancer ),
 			$this->getImportedEntityMappingStore(),
 			$this->logger
 		);

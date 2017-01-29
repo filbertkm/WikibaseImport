@@ -23,12 +23,13 @@ class BadgeItemUpdater {
 
 	/**
 	 * @param SiteLinkList $siteLinks
+	 * @return SiteLinkList
 	 */
 	public function replaceBadges( SiteLinkList $siteLinks ) {
-		$newSiteLinks = array();
+		$newSiteLinks = [];
 
-		foreach( $siteLinks as $siteLink ) {
-			if ( $siteLink->getBadges() !== array() ) {
+		foreach ( $siteLinks as $siteLink ) {
+			if ( ! empty( $siteLink->getBadges() ) ) {
 				$newSiteLinks[] = $this->replaceBadgeItemsInSiteLink( $siteLink );
 			} else {
 				$newSiteLinks[] = $siteLink;
@@ -39,9 +40,9 @@ class BadgeItemUpdater {
 	}
 
 	private function replaceBadgeItemsInSiteLink( SiteLink $siteLink ) {
-		$newBadges = array();
+		$newBadges = [];
 
-		foreach( $siteLink->getBadges() as $badge ) {
+		foreach ( $siteLink->getBadges() as $badge ) {
 			$newBadges[] = $this->entityMappingStore->getLocalId( $badge );
 		}
 

@@ -5,6 +5,7 @@ namespace Wikibase\Import\Maintenance;
 use Asparagus\QueryBuilder;
 use Asparagus\QueryExecuter;
 use Exception;
+use MediaWiki\MediaWikiServices;
 use Psr\Log\LoggerInterface;
 use Wikibase\Import\Console\ImportOptions;
 use Wikibase\Import\EntityId\EntityIdListBuilderFactory;
@@ -118,7 +119,7 @@ class ImportEntities extends \Maintenance {
 	private function newEntityImporter() {
 		$entityImporterFactory = new EntityImporterFactory(
 			WikibaseRepo::getDefaultInstance()->getStore()->getEntityStore(),
-			wfGetLB(),
+			MediaWikiServices::getInstance()->getDBLoadBalancer(),
 			$this->logger,
 			$this->getConfig()->get( 'WBImportSourceApi' )
 		);

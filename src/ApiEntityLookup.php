@@ -3,11 +3,12 @@
 namespace Wikibase\Import;
 
 use Deserializers\DispatchingDeserializer;
-use Http;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 use Wikibase\DataModel\Entity\EntityDocument;
 use Wikibase\DataModel\Entity\EntityId;
 use Wikibase\DataModel\Services\Lookup\EntityLookup;
+use Wikibase\Import\Api\MediaWikiApiClient;
 
 /**
  * @licence GNU GPL v2+
@@ -21,28 +22,29 @@ class ApiEntityLookup implements EntityLookup {
 	private $deserializer;
 
 	/**
+	 * @var MediaWikiApiClient
+	 */
+	private $apiClient;
+
+	/**
 	 * @var LoggerInterface
 	 */
 	private $logger;
 
 	/**
-	 * @var string
-	 */
-	private $apiUrl;
-
-	/**
 	 * @param DispatchingDeserializer $deserializer
+	 * @param MediaWikiApiClient $apiClient
 	 * @param LoggerInterface $logger
 	 * @param string $apiUrl
 	 */
 	public function __construct(
 		DispatchingDeserializer $deserializer,
-		LoggerInterface $logger,
-		$apiUrl
+		MediaWikiApiClient $apiClient,
+		LoggerInterface $logger
 	) {
 		$this->deserializer = $deserializer;
+		$this->apiClient = $apiClient;
 		$this->logger = $logger;
-		$this->apiUrl = $apiUrl;
 	}
 
 	/**
@@ -54,7 +56,7 @@ class ApiEntityLookup implements EntityLookup {
 		$prefixedId = $entityId->getSerialization();
 		$entities = $this->getEntities( array( $prefixedId ) );
 
-		foreach( $entities as $entity ) {
+		foreach ( $entities as $entity ) {
 			return $entity;
 		}
 
@@ -74,51 +76,33 @@ class ApiEntityLookup implements EntityLookup {
 	 * @param string[] $ids
 	 *
 	 * @throws RuntimeException
-	 * @return Entity[]
+	 * @return EntityDocument[]
 	 */
 	public function getEntities( array $ids ) {
-		$data = $this->doRequest( $ids );
+		$params = [
+			'action' => 'wbgetentities',
+			'ids' => implode( '|', $ids ),
+		];
+
+		$data = $this->apiClient->get( $params );
 
 		if ( $data && array_key_exists( 'success', $data ) ) {
 			unset( $data['success'] );
+
 			return $this->extractEntities( $data );
+		} else {
+			throw new \RuntimeException( 'Api request to wbgetentities failed' );
 		}
-
-		 $this->logger->error( 'Api request failed' );
-
-		 return array();
-	}
-
-	private function doRequest( array $ids ) {
-		$params = array(
-			'action' => 'wbgetentities',
-			'ids' => implode( '|', $ids ),
-			'format' => 'json'
-		);
-
-		$json = Http::get(
-			wfAppendQuery( $this->apiUrl, $params ),
-			array(),
-			__METHOD__
-		);
-
-		$data = json_decode( $json, true );
-
-		if ( $data ) {
-			return $data;
-		}
-
-		$this->logger->error( 'Failed to decode json api response' );
 	}
 
 	private function extractEntities( array $entries ) {
-		$entities = array();
+		$entities = [];
 
-		foreach( $entries as $entry ) {
-			foreach( $entry as $entityId => $serialization ) {
+		foreach ( $entries as $entry ) {
+			foreach ( $entry as $entityId => $serialization ) {
 				if ( array_key_exists( 'missing', $serialization ) ) {
 					continue;
-				} else if ( $this->deserializer->isDeserializerFor( $serialization ) ) {
+				} elseif ( $this->deserializer->isDeserializerFor( $serialization ) ) {
 					$entities[$entityId] = $this->deserializer->deserialize( $serialization );
 				}
 			}

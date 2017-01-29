@@ -3,16 +3,13 @@
 namespace Wikibase\Import;
 
 use ApiMain;
-use Serializers\Serializer;
 use FauxRequest;
 use Psr\Log\LoggerInterface;
 use RequestContext;
 use User;
 use Wikibase\DataModel\Entity\BasicEntityIdParser;
-use Wikibase\DataModel\Entity\EntityDocument;
 use Wikibase\DataModel\Entity\EntityId;
 use Wikibase\DataModel\Serializers\StatementSerializer;
-use Wikibase\DataModel\Statement\Statement;
 use Wikibase\DataModel\Statement\StatementList;
 use Wikibase\DataModel\Statement\StatementListProvider;
 use Wikibase\Import\Store\ImportedEntityMappingStore;
@@ -20,6 +17,8 @@ use Wikibase\Import\Store\ImportedEntityMappingStore;
 class StatementsImporter {
 
 	private $statementSerializer;
+
+	private $statementsCountLookup;
 
 	private $entityMappingStore;
 
@@ -33,10 +32,12 @@ class StatementsImporter {
 
 	public function __construct(
 		StatementSerializer $statementSerializer,
+		StatementsCountLookup $statementsCountLookup,
 		ImportedEntityMappingStore $entityMappingStore,
 		LoggerInterface $logger
 	) {
 		$this->statementSerializer = $statementSerializer;
+		$this->statementsCountLookup = $statementsCountLookup;
 		$this->entityMappingStore = $entityMappingStore;
 		$this->logger = $logger;
 
@@ -45,7 +46,19 @@ class StatementsImporter {
 		$this->idParser = new BasicEntityIdParser();
 	}
 
-	public function importStatements( StatementList $statements, EntityId $entityId ) {
+	public function importStatements( StatementListProvider $entity, EntityId $entityId ) {
+		$localId = $this->entityMappingStore->getLocalId( $entityId );
+
+		if ( $localId && !$this->statementsCountLookup->hasStatements( $localId ) ) {
+			$this->doImport( $entity->getStatements(), $entityId );
+		} else {
+			$this->logger->info(
+				'Statements already imported for ' . $entityId->getSerialization()
+			);
+		}
+	}
+
+	private function doImport( StatementList $statements, EntityId $entityId ) {
 		$entityIdString = $entityId->getSerialization();
 
 		$this->logger->info( "Adding statements: $entityIdString" );
@@ -71,7 +84,7 @@ class StatementsImporter {
 	private function addStatementList( EntityId $entityId, StatementList $statements ) {
 		$data = array();
 
-		foreach( $statements as $statement ) {
+		foreach ( $statements as $statement ) {
 			try {
 				$data[] = $this->statementSerializer->serialize(
 					$this->statementCopier->copy( $statement )

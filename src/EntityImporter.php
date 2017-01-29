@@ -6,10 +6,12 @@ use Psr\Log\LoggerInterface;
 use User;
 use Wikibase\DataModel\Entity\BasicEntityIdParser;
 use Wikibase\DataModel\Entity\EntityDocument;
+use Wikibase\DataModel\Entity\EntityId;
 use Wikibase\DataModel\Entity\EntityIdValue;
 use Wikibase\DataModel\Entity\Item;
 use Wikibase\DataModel\Snak\PropertyValueSnak;
 use Wikibase\DataModel\Statement\StatementList;
+use Wikibase\DataModel\Statement\StatementListProvider;
 use Wikibase\Import\Store\ImportedEntityMappingStore;
 use Wikibase\Repo\Store\WikiPageEntityStore;
 
@@ -62,48 +64,66 @@ class EntityImporter {
 
 		$stashedEntities = array();
 
-		foreach( $batches as $batch ) {
+		foreach ( $batches as $batch ) {
 			$entities = $this->apiEntityLookup->getEntities( $batch );
 
 			if ( $entities ) {
 				$this->importBadgeItems( $entities );
 			} else {
-				$this->logger->error( 'Failed to retrieve items for batch' );
+				$this->logger->error( 'Failed to import badge items' );
 			}
 
 			$stashedEntities = array_merge( $stashedEntities, $this->importBatch( $batch ) );
 		}
 
 		if ( $importStatements === true ) {
-			foreach( $stashedEntities as $entity ) {
-				$referencedEntities = $this->getReferencedEntities( $entity );
-				$this->importEntities( $referencedEntities, false );
+			$this->importStatements( $stashedEntities );
+		}
+	}
 
-				$localId = $this->entityMappingStore->getLocalId( $entity->getId() );
+	/**
+	 * @param array $stashedEntities
+	 */
+	private function importStatements( array $stashedEntities ) {
+		foreach ( $stashedEntities as $entity ) {
+			$entityId = $entity->getId();
 
-				if ( $localId && !$this->statementsCountLookup->hasStatements( $localId ) ) {
-					$this->statementsImporter->importStatements( $entity );
-				} else {
-					$this->logger->info(
-						'Statements already imported for ' . $entity->getId()->getSerialization()
-					);
-				}
+			if ( !$entityId instanceof EntityId ) {
+				$this->logger->error( 'Referenced entity does not have a valid entity id' );
+				continue;
+			}
+
+			if ( !$entity instanceof StatementListProvider ) {
+				$this->logger->info( "Referenced entity is not a StatementListProvider" );
+				continue;
+			}
+
+			$referencedEntities = $this->getReferencedEntities( $entity );
+			$this->importEntities( $referencedEntities, false );
+
+			$localId = $this->entityMappingStore->getLocalId( $entity->getId() );
+
+			if ( $localId && !$this->statementsCountLookup->hasStatements( $localId ) ) {
+				$this->statementsImporter->importStatements( $entity->getStatements(), $entityId );
+			} else {
+				$this->logger->info(
+					'Statements already imported for ' . $entity->getId()->getSerialization()
+				);
 			}
 		}
 	}
 
 	private function importBatch( array $batch ) {
 		$entities = $this->apiEntityLookup->getEntities( $batch );
+		$stashedEntities = [];
 
 		if ( !is_array( $entities ) ) {
 			$this->logger->error( 'Failed to import batch' );
 
-			return array();
+			return $stashedEntities;
 		}
 
-		$stashedEntities = array();
-
-		foreach( $entities as $originalId => $entity ) {
+		foreach ( $entities as $originalId => $entity ) {
 			$stashedEntities[] = $entity->copy();
 			$originalEntityId = $this->idParser->parse( $originalId );
 
@@ -114,7 +134,7 @@ class EntityImporter {
 					$entityRevision = $this->createEntity( $entity );
 					$localId = $entityRevision->getEntity()->getId();
 					$this->entityMappingStore->add( $originalEntityId, $localId );
-				} catch( \Exception $ex ) {
+				} catch ( \Exception $ex ) {
 					$this->logger->error( "Failed to add $originalId" );
 					$this->logger->error( $ex->getMessage() );
 				}
@@ -147,13 +167,13 @@ class EntityImporter {
 	private function getBadgeItems( array $entities ) {
 		$badgeItems = array();
 
-		foreach( $entities as $entity ) {
+		foreach ( $entities as $entity ) {
 			if ( !$entity instanceof Item ) {
 				continue;
 			}
 
-			foreach( $entity->getSiteLinks() as $siteLink ) {
-				foreach( $siteLink->getBadges() as $badge ) {
+			foreach ( $entity->getSiteLinks() as $siteLink ) {
+				foreach ( $siteLink->getBadges() as $badge ) {
 					$badgeItems[] = $badge->getSerialization();
 				}
 			}
@@ -166,7 +186,7 @@ class EntityImporter {
 		$snaks = $entity->getStatements()->getAllSnaks();
 		$entities = array();
 
-		foreach( $snaks as $snak ) {
+		foreach ( $snaks as $snak ) {
 			$entities[] = $snak->getPropertyId()->getSerialization();
 
 			if ( $snak instanceof PropertyValueSnak ) {

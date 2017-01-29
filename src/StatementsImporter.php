@@ -14,6 +14,7 @@ use Wikibase\DataModel\Entity\EntityId;
 use Wikibase\DataModel\Serializers\StatementSerializer;
 use Wikibase\DataModel\Statement\Statement;
 use Wikibase\DataModel\Statement\StatementList;
+use Wikibase\DataModel\Statement\StatementListProvider;
 use Wikibase\Import\Store\ImportedEntityMappingStore;
 
 class StatementsImporter {
@@ -44,29 +45,26 @@ class StatementsImporter {
 		$this->idParser = new BasicEntityIdParser();
 	}
 
-	public function importStatements( EntityDocument $entity ) {
-		$statements = $entity->getStatements();
+	public function importStatements( StatementList $statements, EntityId $entityId ) {
+		$entityIdString = $entityId->getSerialization();
 
-		$this->logger->info( 'Adding statements: ' . $entity->getId()->getSerialization() );
+		$this->logger->info( "Adding statements: $entityIdString" );
 
 		if ( !$statements->isEmpty() ) {
-			$entityId = $entity->getId();
+			$localId = $this->entityMappingStore->getLocalId( $entityId );
 
-			if ( $entityId instanceof EntityId ) {
-				$localId = $this->entityMappingStore->getLocalId( $entityId );
-
-				if ( !$localId ) {
-					$this->logger->error( $entityId->getSerialization() .  ' not found' );
-				} else {
-					try {
-						$this->addStatementList( $localId, $statements );
-					} catch ( \Exception $ex ) {
-						$this->logger->error( $ex->getMessage() );
-					}
-				}
+			if ( !$localId ) {
+				$this->logger->error( "[StatementsImporter] $entityIdString not found" );
 			} else {
-				$this->logger->error( 'EntityId not set for entity' );
+				try {
+					$this->addStatementList( $localId, $statements );
+				}
+				catch ( \Exception $ex ) {
+					$this->logger->error( "[StatementsImporter] " . $ex->getMessage() );
+				}
 			}
+		} else {
+			$this->logger->info( "[StatementsImporter] $entityIdString has no statements" );
 		}
 	}
 

@@ -1,20 +1,19 @@
 <?php
 
-namespace Wikibase\Import;
+namespace Wikibase\Import\Store;
 
 use Deserializers\DispatchingDeserializer;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Wikibase\DataModel\Entity\EntityDocument;
 use Wikibase\DataModel\Entity\EntityId;
-use Wikibase\DataModel\Services\Lookup\EntityLookup;
 use Wikibase\Import\Api\MediaWikiApiClient;
 
 /**
  * @licence GNU GPL v2+
  * @author Katie Filbert < aude.wiki@gmail.com >
  */
-class ApiEntityLookup implements EntityLookup {
+class ApiEntityLookup implements BatchEntityLookup {
 
 	/**
 	 * @var DispatchingDeserializer

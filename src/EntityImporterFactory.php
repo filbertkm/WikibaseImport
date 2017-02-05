@@ -10,6 +10,7 @@ use Wikibase\DataModel\Entity\EntityIdParser;
 use Wikibase\DataModel\SerializerFactory;
 use Wikibase\Import\Api\BadgeItemsLookup;
 use Wikibase\Import\Api\MediaWikiApiClient;
+use Wikibase\Import\Store\ApiEntityLookup;
 use Wikibase\Import\Store\DBImportedEntityMappingStore;
 use Wikibase\Import\Store\ImportedEntityMappingStore;
 use Wikibase\Lib\Store\EntityStore;

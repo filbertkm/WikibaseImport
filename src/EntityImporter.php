@@ -8,8 +8,10 @@ use Wikibase\DataModel\Entity\EntityDocument;
 use Wikibase\DataModel\Entity\EntityId;
 use Wikibase\DataModel\Entity\EntityIdParser;
 use Wikibase\DataModel\Entity\EntityIdValue;
+use Wikibase\DataModel\Services\Lookup\EntityLookup;
 use Wikibase\DataModel\Snak\PropertyValueSnak;
 use Wikibase\DataModel\Statement\StatementListProvider;
+use Wikibase\Import\Store\BatchEntityLookup;
 use Wikibase\Import\Store\ImportedEntityMappingStore;
 
 class EntityImporter {
@@ -30,7 +32,7 @@ class EntityImporter {
 
 	public function __construct(
 		StatementsImporter $statementsImporter,
-		ApiEntityLookup $apiEntityLookup,
+		BatchEntityLookup $apiEntityLookup,
 		EntitySaver $entitySaver,
 		ImportedEntityMappingStore $entityMappingStore,
 		EntityIdParser $entityIdParser,
@@ -64,12 +66,18 @@ class EntityImporter {
 				continue;
 			}
 
-			$stashedEntities = array_merge( $stashedEntities, $this->importBatch( $entities ) );
+			$importedEntities = $this->importBatch( $entities );
+			$stashedEntities = array_merge( $stashedEntities, $importedEntities );
+
+			if ( $importStatements === true ) {
+				$this->importStatementsOfEntities( $importedEntities );
+			}
 		}
 
-		if ( $importStatements === true ) {
-			$this->importStatementsOfEntities( $stashedEntities );
-		}
+		$importedEntityIds = array_keys( $stashedEntities );
+		sort( $importedEntityIds );
+
+		return $importedEntityIds;
 	}
 
 	/**
@@ -99,6 +107,8 @@ class EntityImporter {
 	 * @param EntityId $entityId
 	 */
 	private function importStatements( StatementListProvider $entity, EntityId $entityId ) {
+		$this->logger->info( "Importing referenced entities for " . $entityId->getSerialization() );
+
 		$referencedEntities = $this->getReferencedEntities( $entity );
 		$this->importEntities( $referencedEntities, false );
 
@@ -136,18 +146,19 @@ class EntityImporter {
 		$stashedEntities = [];
 
 		foreach ( $entities as $originalId => $entity ) {
-			$stashedEntities[] = $entity->copy();
 			$originalEntityId = $this->idParser->parse( $originalId );
 
 			if ( !$this->entityMappingStore->getLocalId( $originalEntityId ) ) {
 				try {
-					$this->logger->info( "Creating referenced entity: $originalId" );
+					$this->logger->info( "Creating entity: $originalId" );
 
+					$stashedEntities[$originalId] = $entity->copy();
 					$entityRevision = $this->entitySaver->saveEntity( $entity );
+
 					$localId = $entityRevision->getEntity()->getId();
 					$this->entityMappingStore->add( $originalEntityId, $localId );
 				} catch ( \Exception $ex ) {
-					$this->logger->error( "Failed to create referenced entity: $originalId" );
+					$this->logger->error( "Failed to create entity: $originalId" );
 					$this->logger->error( $ex->getMessage() );
 				}
 			}

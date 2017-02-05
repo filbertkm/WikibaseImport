@@ -54,7 +54,7 @@ class ApiEntityLookup implements EntityLookup {
 	 */
 	public function getEntity( EntityId $entityId ) {
 		$prefixedId = $entityId->getSerialization();
-		$entities = $this->getEntities( array( $prefixedId ) );
+		$entities = $this->getEntities( [ $prefixedId ] );
 
 		foreach ( $entities as $entity ) {
 			return $entity;
@@ -91,7 +91,7 @@ class ApiEntityLookup implements EntityLookup {
 
 			return $this->extractEntities( $data );
 		} else {
-			throw new \RuntimeException( 'Api request to wbgetentities failed' );
+			throw new \RuntimeException( 'API request to wbgetentities failed' );
 		}
 	}
 

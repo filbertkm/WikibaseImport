@@ -6,8 +6,8 @@ use Psr\Log\LoggerInterface;
 use Wikibase\DataModel\Entity\BasicEntityIdParser;
 use Wikibase\DataModel\Entity\EntityDocument;
 use Wikibase\DataModel\Entity\EntityId;
+use Wikibase\DataModel\Entity\EntityIdParser;
 use Wikibase\DataModel\Entity\EntityIdValue;
-use Wikibase\DataModel\Entity\Item;
 use Wikibase\DataModel\Snak\PropertyValueSnak;
 use Wikibase\DataModel\Statement\StatementListProvider;
 use Wikibase\Import\Store\ImportedEntityMappingStore;
@@ -33,15 +33,16 @@ class EntityImporter {
 		ApiEntityLookup $apiEntityLookup,
 		EntitySaver $entitySaver,
 		ImportedEntityMappingStore $entityMappingStore,
+		EntityIdParser $entityIdParser,
 		LoggerInterface $logger
 	) {
 		$this->statementsImporter = $statementsImporter;
 		$this->apiEntityLookup = $apiEntityLookup;
 		$this->entitySaver = $entitySaver;
 		$this->entityMappingStore = $entityMappingStore;
+		$this->idParser = $entityIdParser;
 		$this->logger = $logger;
 
-		$this->idParser = new BasicEntityIdParser();
 		$this->batchSize = 10;
 	}
 
@@ -51,14 +52,18 @@ class EntityImporter {
 		$stashedEntities = [];
 
 		foreach ( $entityIdBatches as $entityIds ) {
-			$entities = $this->apiEntityLookup->getEntities( $entityIds );
+			try {
+				$entities = $this->apiEntityLookup->getEntities( $entityIds );
+			} catch ( \RuntimeException $ex ) {
+				$this->logger->error( $ex->getMessage() );
+				continue;
+			}
 
 			if ( empty( $entities ) ) {
 				$this->logger->error( "[EntityImporter] Failed to lookup entities" );
 				continue;
 			}
 
-			$this->importBadgeItems( $entities );
 			$stashedEntities = array_merge( $stashedEntities, $this->importBatch( $entities ) );
 		}
 
@@ -150,31 +155,4 @@ class EntityImporter {
 
 		return $stashedEntities;
 	}
-
-	private function getBadgeItems( array $entities ) {
-		$badgeItems = [];
-
-		foreach ( $entities as $entity ) {
-			if ( !$entity instanceof Item ) {
-				continue;
-			}
-
-			foreach ( $entity->getSiteLinkList() as $siteLink ) {
-				foreach ( $siteLink->getBadges() as $badge ) {
-					$badgeItems[] = $badge->getSerialization();
-				}
-			}
-		}
-
-		return $badgeItems;
-	}
-
-	private function importBadgeItems( array $entities ) {
-		$badgeItems = $this->getBadgeItems( $entities );
-
-		if ( !empty( $badgeItems ) ) {
-			$this->importEntities( $badgeItems, false );
-		}
-	}
-
 }

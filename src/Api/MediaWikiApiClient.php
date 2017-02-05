@@ -43,7 +43,7 @@ class MediaWikiApiClient {
 			return $data;
 		}
 
-		throw new \RuntimeException( 'Failed to decode json api response' );
+		throw new \RuntimeException( 'Failed to decode JSON API response' );
 	}
 
 }

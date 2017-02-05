@@ -7,8 +7,10 @@ use Asparagus\QueryExecuter;
 use Exception;
 use MediaWiki\MediaWikiServices;
 use Psr\Log\LoggerInterface;
+use Wikibase\Import\BadgeItemsImporter;
 use Wikibase\Import\Console\ImportOptions;
 use Wikibase\Import\EntityId\EntityIdListBuilderFactory;
+use Wikibase\Import\EntityImporter;
 use Wikibase\Import\EntityImporterFactory;
 use Wikibase\Import\LoggerFactory;
 use Wikibase\Import\QueryRunner;
@@ -23,6 +25,11 @@ if ( $IP === false ) {
 require_once "$IP/maintenance/Maintenance.php";
 
 class ImportEntities extends \Maintenance {
+
+	/**
+	 * @var EntityImporterFactory
+	 */
+	private $entityImporterFactory;
 
 	/**
 	 * @var LoggerInterface
@@ -74,8 +81,8 @@ class ImportEntities extends \Maintenance {
 			try {
 				$ids = $entityIdListBuilder->getEntityIds( $input );
 
-				$entityImporter = $this->newEntityImporter();
-				$entityImporter->importEntities( $ids );
+				$this->newBadgeItemsImporter()->importBadgeItems();
+				$this->newEntityImporter()->importEntities( $ids );
 			} catch ( Exception $ex ) {
 				$this->logger->error( $ex->getMessage() );
 			}
@@ -102,6 +109,9 @@ class ImportEntities extends \Maintenance {
 		return [ 'entity', 'file', 'all-properties', 'query', 'range' ];
 	}
 
+	/**
+	 * @return EntityIdListBuilderFactory
+	 */
 	private function newEntityIdListBuilderFactory() {
 		$queryRunner = new QueryRunner(
 			new QueryBuilder( $this->getConfig()->get( 'WBImportQueryPrefixes' ) ),
@@ -116,15 +126,33 @@ class ImportEntities extends \Maintenance {
 		);
 	}
 
+	private function getEntityImporterFactory() {
+		if ( !isset( $this->entityImporterFactory ) ) {
+			$this->entityImporterFactory = new EntityImporterFactory(
+				WikibaseRepo::getDefaultInstance()->getStore()->getEntityStore(),
+				MediaWikiServices::getInstance()->getDBLoadBalancer(),
+				$this->logger,
+				$this->getConfig()->get( 'WBImportSourceApi' )
+			);
+		}
+
+		return $this->entityImporterFactory;
+	}
+
+	/**
+	 * @return EntityImporter
+	 */
 	private function newEntityImporter() {
-		$entityImporterFactory = new EntityImporterFactory(
-			WikibaseRepo::getDefaultInstance()->getStore()->getEntityStore(),
-			MediaWikiServices::getInstance()->getDBLoadBalancer(),
-			$this->logger,
-			$this->getConfig()->get( 'WBImportSourceApi' )
-		);
+		$entityImporterFactory = $this->getEntityImporterFactory();
 
 		return $entityImporterFactory->newEntityImporter();
+	}
+
+	/**
+	 * @return BadgeItemsImporter
+	 */
+	private function newBadgeItemsImporter() {
+		return $this->getEntityImporterFactory()->newBadgeItemsImporter();
 	}
 
 }

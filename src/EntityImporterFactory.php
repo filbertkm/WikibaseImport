@@ -6,7 +6,9 @@ use DataValues\Serializers\DataValueSerializer;
 use LoadBalancer;
 use Psr\Log\LoggerInterface;
 use User;
+use Wikibase\DataModel\Entity\EntityIdParser;
 use Wikibase\DataModel\SerializerFactory;
+use Wikibase\Import\Api\BadgeItemsLookup;
 use Wikibase\Import\Api\MediaWikiApiClient;
 use Wikibase\Import\Store\DBImportedEntityMappingStore;
 use Wikibase\Import\Store\ImportedEntityMappingStore;
@@ -77,7 +79,24 @@ class EntityImporterFactory {
 			$this->getApiEntityLookup(),
 			$entitySaver,
 			$this->getImportedEntityMappingStore(),
+			$this->getEntityIdParser(),
 			$this->logger
+		);
+	}
+
+	/**
+	 * @return BadgeItemsImporter
+	 */
+	public function newBadgeItemsImporter() {
+		$badgeItemsLookup = new BadgeItemsLookup(
+			new MediaWikiApiClient( $this->apiUrl )
+		);
+
+		return new BadgeItemsImporter(
+			$this->newEntityImporter(),
+			$badgeItemsLookup,
+			$this->getImportedEntityMappingStore(),
+			$this->getEntityIdParser()
 		);
 	}
 
@@ -130,6 +149,13 @@ class EntityImporterFactory {
 		return new SerializerFactory(
 			new DataValueSerializer()
 		);
+	}
+
+	/**
+	 * @return EntityIdParser
+	 */
+	private function getEntityIdParser() {
+		return WikibaseRepo::getDefaultInstance()->getEntityIdParser();
 	}
 }
 

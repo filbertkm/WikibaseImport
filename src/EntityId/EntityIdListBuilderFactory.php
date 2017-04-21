@@ -65,6 +65,8 @@ class EntityIdListBuilderFactory {
 				return $this->newRangeEntityIdListBuilder();
 			case 'query':
 				return $this->newQueryEntityIdListBuilder();
+			case 'stdin':
+				return $this->newStdinEntityIdListBuilder();
 			default:
 				throw new InvalidArgumentException( 'Unknown import mode: ' . $mode );
 		}
@@ -94,6 +96,10 @@ class EntityIdListBuilderFactory {
 
 	private function newRangeEntityIdListBuilder() {
 		return new RangeEntityIdListBuilder( $this->idParser );
+	}
+
+	private function newStdinEntityIdListBuilder() {
+		return new StdinEntityIdListBuilder();
 	}
 
 }

@@ -1,10 +1,11 @@
 <?php
 
-namespace Wikibase\Import\Console;
+namespace Wikibase\Import\Maintenance;
 
-use Maintenance;
+use ArrayIterator;
+use IteratorAggregate;
 
-class ImportOptions {
+class ImportOptions implements IteratorAggregate {
 
 	/**
 	 * @var array
@@ -42,6 +43,13 @@ class ImportOptions {
 		}
 
 		return $this->options[$name];
+	}
+
+	/**
+	 * @return ArrayIterator
+	 */
+	public function getIterator() {
+		return new ArrayIterator( $this->options );
 	}
 
 }

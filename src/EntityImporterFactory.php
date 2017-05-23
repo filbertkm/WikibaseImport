@@ -101,7 +101,7 @@ class EntityImporterFactory {
 		);
 	}
 
-	private function getImportedEntityMappingStore() {
+	public function getImportedEntityMappingStore() {
 		if ( $this->importedEntityMappingStore === null ) {
 			$wikibaseRepo = WikibaseRepo::getDefaultInstance();
 
@@ -129,5 +129,5 @@ class EntityImporterFactory {
 	}
 }
 
-$maintClass = "Wikibase\Import\Maintenance\ImportEntities";
-require_once RUN_MAINTENANCE_IF_MAIN;
+//$maintClass = "Wikibase\Import\Maintenance\ImportEntities";
+//require_once RUN_MAINTENANCE_IF_MAIN;

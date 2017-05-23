@@ -2,5 +2,14 @@
     "@metadata": {
         "authors": []
     },
-    "wikibaseimport-desc": "Allows importing data from another Wikibase instance"
+    "wikibaseimport-desc": "Allows importing data from another Wikibase instance",
+    "wikibaseimport-importentity-explanation": "This special page imports an entity (item or property) from $1. After the import is completed (which can take several seconds), you will be redirected to the local version of the entity. If the entity was already imported, no new entity is created, and you will be redirected to the existing local entity.",
+    "wikibaseimport-importentity-desc": "Import an entity",
+    "wikibaseimport-importentity-form-section": "Import entity",
+    "wikibaseimport-importentity-form-submit-label": "Import",
+    "wikibaseimport-importentity-form-entityid-label": "Entity ID on $1",
+    "wikibaseimport-importentity-form-entityid-placeholder": "Qxx or Pxx",
+    "wikibaseimport-importentity-form-importstatements-label": "Import statements (not supported yet)",
+    "wikibaseimport-importentity-error-no-local-id-title": "Redirect failed",
+    "wikibaseimport-importentity-error-no-local-id-message": "No local entity ID for this remote entity ID found after import; does the remote entity exist?"
 }

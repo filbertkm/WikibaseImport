@@ -53,7 +53,7 @@ class EntityImporter {
 		$this->logger = $logger;
 
 		$this->idParser = new BasicEntityIdParser();
-		$this->importUser = User::newFromId( 0 );
+		$this->importUser = User::newFromSession();
 		$this->batchSize = 10;
 	}
 

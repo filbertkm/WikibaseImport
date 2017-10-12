@@ -63,3 +63,9 @@ Import a range of entities:
 ```
 php maintenance/importEntities.php --range Q1:Q20
 ```
+
+Import a list of entities printed by another program:
+
+```
+printf 'Q%s\n' {1..20} {100..120} | php maintenance/importEntities.php --stdin
+```

@@ -11,7 +11,7 @@ use Wikibase\DataModel\Entity\Item;
 use Wikibase\DataModel\Snak\PropertyValueSnak;
 use Wikibase\DataModel\Statement\StatementList;
 use Wikibase\Import\Store\ImportedEntityMappingStore;
-use Wikibase\Repo\Store\WikiPageEntityStore;
+use Wikibase\Lib\Store\EntityStore;
 
 class EntityImporter {
 
@@ -39,7 +39,7 @@ class EntityImporter {
 		StatementsImporter $statementsImporter,
 		BadgeItemUpdater $badgeItemUpdater,
 		ApiEntityLookup $apiEntityLookup,
-		WikiPageEntityStore $entityStore,
+		EntityStore $entityStore,
 		ImportedEntityMappingStore $entityMappingStore,
 		StatementsCountLookup $statementsCountLookup,
 		LoggerInterface $logger

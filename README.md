@@ -19,7 +19,7 @@ Then go into the WikibaseImport extension directory and run ```composer update``
 Then, to enable the extension, add it in your ```LocalSettings.php``` file:
 
 ```
-require_once "$IP/extensions/WikibaseImport/WikibaseImport.php";
+wfLoadExtension( 'WikibaseImport' );
 ```
 
 The extension requires a new database table to map entity ids from the foreign

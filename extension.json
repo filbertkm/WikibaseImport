@@ -1,4 +1,5 @@
 {
+	"load_composer_autoloader": true,
 	"name": "Wikibase Import",
 	"version": "0.1",
 	"author": [

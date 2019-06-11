@@ -74,22 +74,42 @@ class EntityImporter {
 			$stashedEntities = array_merge( $stashedEntities, $this->importBatch( $batch ) );
 		}
 
-		if ( $importStatements === true ) {
-			foreach( $stashedEntities as $entity ) {
-				$referencedEntities = $this->getReferencedEntities( $entity );
-				$this->importEntities( $referencedEntities, false );
+        if ( $importStatements === true ) {
+            foreach( $stashedEntities as $entity ) {
+                $referencedEntities = $this->getReferencedEntities( $entity );
+                $this->importEntities( $referencedEntities, false );
 
-				$localId = $this->entityMappingStore->getLocalId( $entity->getId() );
+                $entity_new = $entity;
+                $statements_new = $entity->getStatements();
+                foreach($statements_new as $key1 => $statement_new) {
+                    $snak_new = $statement_new->getMainSnak();
+                    if ($snak_new instanceof PropertyValueSnak) {
+                        $data_value_new = $snak_new->getDataValue();
+                        if ($data_value_new instanceof UnboundedQuantityValue) {
+                            $unit = $data_value_new->getUnit();
+                            if (strpos($unit, 'http://www.wikidata.org/entity/') !== false) {
+                                $id = str_replace("http://www.wikidata.org/entity/", "", $unit);
+                                $newid = $this->entityMappingStore->getLocalId(new ItemId($id));
+                                $data_value_new = new UnboundedQuantityValue($data_value_new->getAmount(), 'http://YOUR_HOST/entity/' . $newid);
+                                $snak_new = new PropertyValueSnak($snak_new->getPropertyId(), $data_value_new);
+                                $statement_new->setMainSnak($snak_new);
+                                $statements_new->addStatement($statement_new, $key1);
 
-				if ( $localId && !$this->statementsCountLookup->hasStatements( $localId ) ) {
-					$this->statementsImporter->importStatements( $entity );
-				} else {
-					$this->logger->info(
-						'Statements already imported for ' . $entity->getId()->getSerialization()
-					);
-				}
-			}
-		}
+                            }
+                        }
+                    }
+                }
+                $localId = $this->entityMappingStore->getLocalId($entity->getId());
+
+                if ($localId && !$this->statementsCountLookup->hasStatements($localId)) {
+                    $this->statementsImporter->importStatements($entity_new);
+                } else {
+                    $this->logger->info(
+                        'Statements already imported for ' . $entity->getId()->getSerialization()
+                    );
+                }
+            }
+        }
 	}
 
 	private function importBatch( array $batch ) {
@@ -162,24 +182,33 @@ class EntityImporter {
 		return $badgeItems;
 	}
 
-	private function getReferencedEntities( EntityDocument $entity ) {
-		$snaks = $entity->getStatements()->getAllSnaks();
-		$entities = array();
+    private function getReferencedEntities( EntityDocument $entity ) {
+        $statements = $entity->getStatements();
+        $snaks = $statements->getAllSnaks();
+        $entities = array();
 
-		foreach( $snaks as $snak ) {
-			$entities[] = $snak->getPropertyId()->getSerialization();
+        foreach( $snaks as $key => $snak ) {
+            $entities[] = $snak->getPropertyId()->getSerialization();
 
-			if ( $snak instanceof PropertyValueSnak ) {
-				$value = $snak->getDataValue();
-
-				if ( $value instanceof EntityIdValue ) {
-					$entities[] = $value->getEntityId()->getSerialization();
-				}
-			}
-		}
-
-		return array_unique( $entities );
-	}
+            if ( $snak instanceof PropertyValueSnak ) {
+                $value = $snak->getDataValue();
+                if ( $value instanceof EntityIdValue ) {
+                    $entities[] = $value->getEntityId()->getSerialization();
+                }
+                if ($value instanceof UnboundedQuantityValue){
+                    $unit = $value->getUnit();
+                    if (strpos($unit, 'http://www.wikidata.org/entity/') !== false){
+                        $value2 = array_pop(array_reverse($this->apiEntityLookup->getEntities([str_replace("http://www.wikidata.org/entity/","",$value->getUnit())])));
+                        $number = $value2->getId()->getSerialization();
+                        $unit = $value->getUnit();
+                        $unit = $number;
+                        $entities[] = $number;
+                    }
+                }
+            }
+        }
+        return array_unique( $entities );
+    }
 
 	private function importBadgeItems( array $entities ) {
 		$badgeItems = $this->getBadgeItems( $entities );

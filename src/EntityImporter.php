@@ -9,10 +9,14 @@ use Wikibase\DataModel\Entity\EntityDocument;
 use Wikibase\DataModel\Entity\EntityIdValue;
 use Wikibase\DataModel\Entity\Item;
 use Wikibase\DataModel\Snak\PropertyValueSnak;
+use Wikibase\DataModel\Snak\SnakList;
 use Wikibase\DataModel\Statement\StatementList;
 use Wikibase\EntityContent;
 use Wikibase\Import\Store\ImportedEntityMappingStore;
 use Wikibase\Lib\Store\EntityStore;
+use Wikibase\Repo\WikibaseRepo;
+use DataValues\UnboundedQuantityValue;
+use Wikibase\DataModel\Entity\ItemId;
 
 class EntityImporter {
 
@@ -81,7 +85,8 @@ class EntityImporter {
                 $this->importEntities( $referencedEntities, false );
 
                 $entity_new = $entity;
-                $statements_new = $entity->getStatements();
+		$statements_new = $entity->getStatements();
+		$uri = WikibaseRepo::getDefaultInstance()->getSettings()->getSetting( 'conceptBaseUri' );  
                 foreach($statements_new as $key1 => $statement_new) {
                     $snak_new = $statement_new->getMainSnak();
                     if ($snak_new instanceof PropertyValueSnak) {
@@ -89,17 +94,31 @@ class EntityImporter {
                         if ($data_value_new instanceof UnboundedQuantityValue) {
                             $unit = $data_value_new->getUnit();
                             if (strpos($unit, 'http://www.wikidata.org/entity/') !== false) {
-                                $id = str_replace("http://www.wikidata.org/entity/", "", $unit);
-                                $newid = $this->entityMappingStore->getLocalId(new ItemId($id));
-                                $data_value_new = new UnboundedQuantityValue($data_value_new->getAmount(), 'http://YOUR_HOST/entity/' . $newid);
+				$id = str_replace("http://www.wikidata.org/entity/", "", $unit);
+				$newid = $this->entityMappingStore->getLocalId(new ItemId($id));
+                                $data_value_new = new UnboundedQuantityValue($data_value_new->getAmount(), $uri . $newid);
                                 $snak_new = new PropertyValueSnak($snak_new->getPropertyId(), $data_value_new);
                                 $statement_new->setMainSnak($snak_new);
-                                $statements_new->addStatement($statement_new, $key1);
-
                             }
                         }
-                    }
-                }
+		    }
+		    $snakList_new = $statement_new->getQualifiers();
+		    foreach($snakList_new as $key2 => $snak_new){
+		        if ($snak_new instanceof PropertyValueSnak) {
+                            $data_value_new = $snak_new->getDataValue();
+                            if ($data_value_new instanceof UnboundedQuantityValue) {
+				$unit = $data_value_new->getUnit();
+                                if (strpos($unit, 'http://www.wikidata.org/entity/') !== false) {
+			            $id = str_replace("http://www.wikidata.org/entity/", "", $unit);
+				    $newid = $this->entityMappingStore->getLocalId(new ItemId($id));
+                                    $data_value_new = new UnboundedQuantityValue($data_value_new->getAmount(), $uri . $newid);
+                                    $snak_new = new PropertyValueSnak($snak_new->getPropertyId(), $data_value_new);
+			        } 
+                             }
+		         }
+			 $snakList_new[$key2] = $snak_new;
+		    }
+		}
                 $localId = $this->entityMappingStore->getLocalId($entity->getId());
 
                 if ($localId && !$this->statementsCountLookup->hasStatements($localId)) {
@@ -193,11 +212,11 @@ class EntityImporter {
 
             if ( $snak instanceof PropertyValueSnak ) {
                 $value = $snak->getDataValue();
-                if ( $value instanceof EntityIdValue ) {
+		if ( $value instanceof EntityIdValue ) {
                     $entities[] = $value->getEntityId()->getSerialization();
-                }
-                if ($value instanceof UnboundedQuantityValue){
-                    $unit = $value->getUnit();
+		}
+                if ($value instanceof UnboundedQuantityValue ){
+		    $unit = $value->getUnit();
                     if (strpos($unit, 'http://www.wikidata.org/entity/') !== false){
                         $value2 = array_pop(array_reverse($this->apiEntityLookup->getEntities([str_replace("http://www.wikidata.org/entity/","",$value->getUnit())])));
                         $number = $value2->getId()->getSerialization();
@@ -205,8 +224,8 @@ class EntityImporter {
                         $unit = $number;
                         $entities[] = $number;
                     }
-                }
-            }
+		}
+	    }
         }
         return array_unique( $entities );
     }

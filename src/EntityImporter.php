@@ -185,7 +185,7 @@ class EntityImporter
             $entity,
             'Import entity',
             $this->importUser,
-            EDIT_NEW | EntityContent::EDIT_IGNORE_CONSTRAINTS
+            EDIT_NEW
         );
     }
 

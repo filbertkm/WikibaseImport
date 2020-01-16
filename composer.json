@@ -15,7 +15,7 @@
 		"php": ">=5.5.0",
 		"benestar/asparagus": "~0.4",
 		"monolog/monolog": "~1.18",
-		"wikibase/data-model": "~6.0|~7.0"
+		"wikibase/data-model": "~6.0|~7.0|~8.0|~9.0"
 	},
 	"autoload": {
 		"psr-4": {

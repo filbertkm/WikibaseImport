@@ -93,6 +93,7 @@ class EntityImporter {
 	}
 
 	private function importBatch( array $batch ) {
+		$this->logger->debug( 'Importing Batch: ' . implode( ', ', $batch ) );
 		$entities = $this->apiEntityLookup->getEntities( $batch );
 
 		if ( !is_array( $entities ) ) {
@@ -113,6 +114,7 @@ class EntityImporter {
 
 					$entityRevision = $this->createEntity( $entity );
 					$localId = $entityRevision->getEntity()->getId();
+					$this->logger->debug( "Adding $originalId to mapping store" );
 					$this->entityMappingStore->add( $originalEntityId, $localId );
 				} catch( \Exception $ex ) {
 					$this->logger->error( "Failed to add $originalId" );
@@ -152,7 +154,7 @@ class EntityImporter {
 				continue;
 			}
 
-			foreach( $entity->getSiteLinks() as $siteLink ) {
+			foreach( $entity->getSiteLinkList()->toArray() as $siteLink ) {
 				foreach( $siteLink->getBadges() as $badge ) {
 					$badgeItems[] = $badge->getSerialization();
 				}

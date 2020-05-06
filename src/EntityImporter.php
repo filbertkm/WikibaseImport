@@ -152,7 +152,7 @@ class EntityImporter {
 				continue;
 			}
 
-			foreach( $entity->getSiteLinks() as $siteLink ) {
+			foreach( $entity->getSiteLinkList()->toArray() as $siteLink ) {
 				foreach( $siteLink->getBadges() as $badge ) {
 					$badgeItems[] = $badge->getSerialization();
 				}

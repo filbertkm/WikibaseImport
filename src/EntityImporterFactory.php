@@ -70,7 +70,7 @@ class EntityImporterFactory {
 				$this->getApiEntityLookup(),
 				$this->entityStore,
 				$this->getImportedEntityMappingStore(),
-				new PagePropsStatementCountLookup( $this->loadBalancer ),
+				new PagePropsStatementCountLookup( $this->loadBalancer, $this->getEntityNamespaceLookup() ),
 				$this->logger
 			);
 		}
@@ -126,6 +126,12 @@ class EntityImporterFactory {
 		return new SerializerFactory(
 			new DataValueSerializer()
 		);
+	}
+
+	private function getEntityNamespaceLookup() {
+		$wikibaseRepo = WikibaseRepo::getDefaultInstance();
+
+		return $wikibaseRepo->getEntityNamespaceLookup();
 	}
 }
 

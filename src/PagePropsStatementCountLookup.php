@@ -2,15 +2,21 @@
 
 namespace Wikibase\Import;
 
+use Exception;
 use LoadBalancer;
 use Wikibase\DataModel\Entity\EntityId;
+use Wikibase\Lib\Store\EntityNamespaceLookup;
+use Wikibase\Repo\WikibaseRepo;
 
 class PagePropsStatementCountLookup implements StatementsCountLookup {
 
 	private $loadBalancer;
 
-	public function __construct( LoadBalancer $loadBalancer ) {
+	private $lookup;
+
+	public function __construct( LoadBalancer $loadBalancer, EntityNamespaceLookup $lookup ) {
 		$this->loadBalancer = $loadBalancer;
+		$this->lookup = $lookup;
 	}
 
 	public function getStatementCount( EntityId $entityId ) {
@@ -20,7 +26,7 @@ class PagePropsStatementCountLookup implements StatementsCountLookup {
 			array( 'page_props', 'page' ),
 			array( 'pp_value' ),
 			array(
-				'page_namespace' => 0,
+				'page_namespace' => $this->lookup->getEntityNamespace( $entityId->getEntityType() ),
 				'page_title' => $entityId->getSerialization(),
 				'pp_propname' => 'wb-claims'
 			),
@@ -32,7 +38,7 @@ class PagePropsStatementCountLookup implements StatementsCountLookup {
 		$this->loadBalancer->closeConnection( $db );
 
 		if ( $res === false ) {
-			return 0;
+			throw new Exception( 'Could not find entity ' . $entityId->getSerialization() . ' in page_props!' );
 		}
 
 		return (int)$res->pp_value;

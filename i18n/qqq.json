@@ -1,5 +1,14 @@
 {
 	"@metadata": {
 	},
-	"wikibaseimport-desc": "{{desc|name=WikibaseImport|url=https://www.mediawiki.org/wiki/Extension:WikibaseImport}}"
+	"wikibaseimport-desc": "{{desc|name=WikibaseImport|url=https://www.mediawiki.org/wiki/Extension:WikibaseImport}}",
+	"wikibaseimport-importentity-desc": "{{doc-special|ImportEntity}}",
+	"wikibaseimport-importentity-explanation": "Explanation of what this special page does. This text is displayed on the special page above the entity ID form. Parameters:\n* $1 contains a link to the remote (source) Wikibase installation from which entities are imported.",
+	"wikibaseimport-importentity-form-section": "Header of the section of the entity ID form.",
+	"wikibaseimport-importentity-form-submit-label": "Label for the button that starts the import.",
+	"wikibaseimport-importentity-form-entityid-label": "Label for the entity ID input field.",
+	"wikibaseimport-importentity-form-entityid-placeholder": "Entity ID placeholder for the input field.",
+    "wikibaseimport-importentity-form-importstatements-label": "Label for the “import statements” checkbox. This feature is not supported yet, so the checkbox is disabled.",
+	"wikibaseimport-importentity-error-no-local-id-title": "Page title of the error page for when the local entity ID to redirect to cannot be found.",
+	"wikibaseimport-importentity-error-no-local-id-message": "Error message for when the local entity ID to redirect to cannot be found."
 }

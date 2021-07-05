@@ -10,6 +10,7 @@ use Wikibase\DataModel\Entity\EntityIdValue;
 use Wikibase\DataModel\Entity\Item;
 use Wikibase\DataModel\Snak\PropertyValueSnak;
 use Wikibase\DataModel\Statement\StatementList;
+use Wikibase\EntityContent;
 use Wikibase\Import\Store\ImportedEntityMappingStore;
 use Wikibase\Lib\Store\EntityStore;
 
@@ -142,7 +143,7 @@ class EntityImporter {
 			$entity,
 			'Import entity',
 			$this->importUser,
-			EDIT_NEW
+            EDIT_NEW | EntityContent::EDIT_IGNORE_CONSTRAINTS
 		);
 	}
 
